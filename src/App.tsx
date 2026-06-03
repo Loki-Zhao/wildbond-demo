@@ -1,0 +1,871 @@
+import {
+  Archive,
+  BookOpen,
+  ChevronUp,
+  Footprints,
+  Gem,
+  HeartPulse,
+  Info,
+  Languages,
+  Map,
+  PawPrint,
+  RotateCcw,
+  Save,
+  Shuffle,
+  Sparkles,
+  Trash2,
+  X
+} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
+import { BattleView } from "./components/BattleView";
+import { MapView } from "./components/MapView";
+import { PixelPetSprite } from "./components/PixelSprite";
+import { ShortcutHint } from "./components/ShortcutHint";
+import { MAPS, getMapDefinition } from "./data/maps";
+import { PETS, STARTER_SPECIES_IDS, getPetSpecies } from "./data/pets";
+import { getSkill } from "./data/skills";
+import {
+  ELEMENT_COLORS,
+  MAX_ENHANCE_LEVEL,
+  MAX_PET_LEVEL,
+  decomposeCrystalValue,
+  enhancementCostForNext,
+  expToNext,
+  getMaxHp,
+  getPetStats,
+  getStatsForSpecies
+} from "./game/balance";
+import {
+  advanceBattleTurn,
+  applyDefeat,
+  createBossBattle,
+  createWildBattle,
+  discoverEnemies,
+  defendUnit,
+  enemyAct,
+  finishBattle,
+  tryCapture,
+  useSkill
+} from "./game/combat";
+import { canFuse, fusePets } from "./game/fusion";
+import { canMoveTo, distance, getEncounterRateForTerrain, getTerrainAt } from "./game/mapLogic";
+import { clearSave, loadGame, saveGame } from "./game/save";
+import { addLog, addPetToCollection, chooseStarter, healParty, setActiveMap, syncUnlocks } from "./game/state";
+import type { BattleState, GameState, PetInstance } from "./game/types";
+import {
+  elementLabel,
+  fusionReason,
+  growthLabel,
+  mapName,
+  petName,
+  readStoredLanguage,
+  roleText,
+  skillTooltip,
+  skillName,
+  statFocusText,
+  t,
+  translateLog,
+  type Language,
+  writeStoredLanguage
+} from "./i18n";
+
+type PanelId = "party" | "storage" | "fusion" | "dex" | "maps";
+
+const isDesktopShortcutEnvironment = (): boolean =>
+  typeof window !== "undefined" && window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+
+const isEditableTarget = (target: EventTarget | null): boolean => {
+  if (!(target instanceof HTMLElement)) return false;
+  return Boolean(target.closest("input, textarea, select, [contenteditable='true']"));
+};
+
+const unlockText = (language: Language, mapId: string): string => {
+  if (mapId === "meadow") return t(language, "unlockedMeadow");
+  if (mapId === "coast") return t(language, "unlockedCoast");
+  if (mapId === "volcano") return t(language, "unlockedVolcano");
+  if (mapId === "canyon") return t(language, "unlockedCanyon");
+  return t(language, "unlockedHighland");
+};
+
+const allPets = (game: GameState): PetInstance[] => [...game.party, ...game.storage];
+
+function PetCard({
+  pet,
+  compact,
+  language,
+  actions
+}: {
+  pet: PetInstance;
+  compact?: boolean;
+  language: Language;
+  actions?: ReactNode;
+}) {
+  const species = getPetSpecies(pet.speciesId);
+  const stats = getPetStats(pet);
+  const hpMax = getMaxHp(pet);
+  const expNeed = expToNext(pet.expLevel);
+  const maxLevel = pet.expLevel >= MAX_PET_LEVEL;
+  const enhanceSuffix = pet.enhanceLevel ? ` +${pet.enhanceLevel}` : "";
+
+  return (
+    <article className={`pet-card ${compact ? "compact" : ""}`}>
+      <div className="pet-card-head">
+        <PixelPetSprite speciesId={species.id} element={species.element} growthLevel={species.growthLevel} size={compact ? "small" : "medium"} />
+        <div>
+          <strong>{petName(language, species.id, species.name)}{enhanceSuffix}</strong>
+          <span>
+            {growthLabel(language, species.growthLevel)} · Lv{pet.expLevel}
+          </span>
+        </div>
+      </div>
+      <div className="hpbar small">
+        <span style={{ width: `${Math.max(0, Math.min(100, (pet.currentHp / hpMax) * 100))}%` }} />
+      </div>
+      <div className="pet-stats">
+        <span>HP {pet.currentHp}/{hpMax}</span>
+        <span>{t(language, "attack")} {stats.attack}</span>
+        <span>{t(language, "defenseStat")} {stats.defense}</span>
+        <span>{t(language, "speed")} {stats.speed}</span>
+        <span>{t(language, "crit")} {stats.crit}%</span>
+      </div>
+      {!compact ? (
+        <>
+          <div className="skill-list">
+            {species.skillIds.map((skillId) => {
+              const skill = getSkill(skillId);
+              return (
+                <span key={skill.id} title={skillTooltip(language, skill)}>
+                  {skillName(language, skill.id, skill.name)}
+                  <small>{skill.apCost}AP</small>
+                </span>
+              );
+            })}
+          </div>
+          <div className="exp-line">
+            {maxLevel ? t(language, "maxLevelFusion") : `${t(language, "exp")} ${pet.exp}/${expNeed}`}
+          </div>
+        </>
+      ) : null}
+      {actions ? <div className="card-actions">{actions}</div> : null}
+    </article>
+  );
+}
+
+function StarterOverlay({ language, onChoose }: { language: Language; onChoose: (speciesId: string) => void }) {
+  return (
+    <div className="battle-backdrop">
+      <section className="starter-panel">
+        <h1>{t(language, "appTitle")}</h1>
+        <p>{t(language, "starterPrompt")}</p>
+        <div className="starter-grid">
+          {STARTER_SPECIES_IDS.map((speciesId) => {
+            const species = getPetSpecies(speciesId);
+            return (
+              <button className="starter-card" key={species.id} onClick={() => onChoose(species.id)}>
+                <PixelPetSprite speciesId={species.id} element={species.element} growthLevel={species.growthLevel} size="large" active />
+                <strong>{petName(language, species.id, species.name)}</strong>
+                <small>
+                  {elementLabel(language, species.element)} · {roleText(language, species.role)}
+                </small>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function DexDetailModal({ speciesId, language, onClose }: { speciesId: string; language: Language; onClose: () => void }) {
+  const species = getPetSpecies(speciesId);
+  const statsLv1 = getStatsForSpecies(species.id, 1);
+  const statsLv10 = getStatsForSpecies(species.id, MAX_PET_LEVEL);
+  return (
+    <div className="modal-backdrop">
+      <section className="dex-detail-panel">
+        <button className="modal-close square-button" type="button" onClick={onClose} title={t(language, "close")}>
+          <X size={18} />
+        </button>
+        <div className="dex-detail-hero">
+          <PixelPetSprite speciesId={species.id} element={species.element} growthLevel={species.growthLevel} size="large" active />
+          <div>
+            <span className="element-chip" style={{ background: ELEMENT_COLORS[species.element] }}>
+              {elementLabel(language, species.element)}
+            </span>
+            <h2>{petName(language, species.id, species.name)}</h2>
+            <p>
+              {growthLabel(language, species.growthLevel)} · {roleText(language, species.role)} · {statFocusText(language, species.statFocus)}
+            </p>
+          </div>
+        </div>
+        <div className="dex-detail-stats">
+          <div>
+            <strong>{t(language, "baseLv1")}</strong>
+            <span>HP {statsLv1.hp}</span>
+            <span>{t(language, "attack")} {statsLv1.attack}</span>
+            <span>{t(language, "defenseStat")} {statsLv1.defense}</span>
+            <span>{t(language, "speed")} {statsLv1.speed}</span>
+            <span>{t(language, "crit")} {statsLv1.crit}%</span>
+          </div>
+          <div>
+            <strong>{t(language, "baseLv10")}</strong>
+            <span>HP {statsLv10.hp}</span>
+            <span>{t(language, "attack")} {statsLv10.attack}</span>
+            <span>{t(language, "defenseStat")} {statsLv10.defense}</span>
+            <span>{t(language, "speed")} {statsLv10.speed}</span>
+            <span>{t(language, "crit")} {statsLv10.crit}%</span>
+          </div>
+        </div>
+        <div className="dex-detail-skills">
+          {species.skillIds.map((skillId) => {
+            const skill = getSkill(skillId);
+            return (
+              <span key={skill.id} title={skillTooltip(language, skill)}>
+                {skillName(language, skill.id, skill.name)}
+                <small>{skill.apCost} AP</small>
+              </span>
+            );
+          })}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+export function App() {
+  const [game, setGame] = useState<GameState>(() => loadGame());
+  const [battle, setBattle] = useState<BattleState | null>(null);
+  const [battleOutcome, setBattleOutcome] = useState<"defeat" | null>(null);
+  const [panel, setPanel] = useState<PanelId>("party");
+  const [fusionPick, setFusionPick] = useState<string[]>([]);
+  const [dexDetailSpeciesId, setDexDetailSpeciesId] = useState<string | null>(null);
+  const [language, setLanguage] = useState<Language>(() => readStoredLanguage());
+
+  const activeMap = getMapDefinition(game.activeMapId);
+  const defeatedCurrentBoss = game.defeatedBosses.includes(game.activeMapId);
+
+  useEffect(() => {
+    saveGame(game);
+  }, [game]);
+
+  useEffect(() => {
+    writeStoredLanguage(language);
+    document.documentElement.lang = language === "ja" ? "ja" : "zh-CN";
+    document.title = `${t(language, "appTitle")} Demo`;
+  }, [language]);
+
+  const startBattle = (nextBattle: BattleState) => {
+    setGame((current) => discoverEnemies(current, nextBattle));
+    setBattleOutcome(null);
+    setBattle(nextBattle);
+  };
+
+  const move = (dx: number, dy: number) => {
+    if (battle || battleOutcome || game.party.length === 0) return;
+    if (game.party.every((pet) => pet.currentHp <= 0)) {
+      setGame((current) => addLog(current, "队伍需要恢复后才能继续探索。"));
+      return;
+    }
+
+    const nextX = game.position.x + dx;
+    const nextY = game.position.y + dy;
+    if (!canMoveTo(activeMap, nextX, nextY)) return;
+
+    const terrain = getTerrainAt(activeMap, nextX, nextY);
+    const rate = getEncounterRateForTerrain(activeMap, terrain);
+    const moved = {
+      ...game,
+      position: { x: nextX, y: nextY }
+    };
+
+    setGame(moved);
+
+    if (distance({ x: nextX, y: nextY }, activeMap.boss) <= 1 && !defeatedCurrentBoss) {
+      startBattle(createBossBattle(moved));
+      return;
+    }
+
+    if (rate > 0 && Math.random() < rate) {
+      startBattle(createWildBattle(moved));
+    }
+  };
+
+  const handleBattleResult = (resultBattle: BattleState, victory?: boolean, defeat?: boolean) => {
+    if (victory) {
+      setGame((current) => finishBattle(current, resultBattle, { bossDefeated: resultBattle.isBoss }));
+      setBattle(null);
+      setBattleOutcome(null);
+      return;
+    }
+    if (defeat) {
+      setBattle(resultBattle);
+      setBattleOutcome("defeat");
+      return;
+    }
+    setBattle(resultBattle);
+  };
+
+  const handleUseSkill = (casterId: string, skillId: string, targetId?: string) => {
+    if (!battle) return;
+    const result = useSkill(battle, casterId, skillId, targetId);
+    const advanced = result.victory || result.defeat ? result : advanceBattleTurn(result.state);
+    handleBattleResult(advanced.state, advanced.victory, advanced.defeat);
+  };
+
+  const handleEnemyAct = () => {
+    if (!battle) return;
+    const result = enemyAct(battle);
+    handleBattleResult(result.state, result.victory, result.defeat);
+  };
+
+  const handleDefend = (allyId: string) => {
+    if (!battle) return;
+    const result = defendUnit(battle, allyId);
+    const advanced = result.victory || result.defeat ? result : advanceBattleTurn(result.state);
+    handleBattleResult(advanced.state, advanced.victory, advanced.defeat);
+  };
+
+  const handleCapture = (enemyId: string) => {
+    if (!battle) return;
+    if (game.inventory.captureStones <= 0) {
+      setBattle({ ...battle, log: ["捕获石不足。", ...battle.log].slice(0, 80) });
+      return;
+    }
+
+    const result = tryCapture(battle, enemyId);
+    const inventory = {
+      ...game.inventory,
+      captureStones: Math.max(0, game.inventory.captureStones - 1)
+    };
+    let nextGame: GameState = { ...game, inventory };
+    if (result.success && result.pet) {
+      nextGame = addPetToCollection(nextGame, result.pet);
+    }
+    setGame(nextGame);
+    if (result.battle.enemies.length === 0) {
+      handleBattleResult(result.battle, true, false);
+      return;
+    }
+    setBattle(result.battle);
+  };
+
+  const returnHome = () => {
+    if (battle || battleOutcome || game.party.length === 0) return;
+    setGame((current) => {
+      const map = getMapDefinition(current.activeMapId);
+      return healParty(
+        addLog(
+          {
+            ...current,
+            position: { ...map.camp }
+          },
+          `返回${map.name}营地。`
+        )
+      );
+    });
+  };
+
+  const recoverAtCamp = () => {
+    if (battle || battleOutcome || game.party.length === 0) return;
+    if (distance(game.position, activeMap.camp) > 3) return;
+    setGame((current) => healParty(current));
+  };
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (battle || battleOutcome || game.party.length === 0 || isEditableTarget(event.target)) return;
+      const key = event.key.toLowerCase();
+      const desktopShortcut = isDesktopShortcutEnvironment();
+      if (desktopShortcut && dexDetailSpeciesId) return;
+
+      const panelByKey: Record<string, PanelId> = {
+        "1": "party",
+        "2": "storage",
+        "3": "fusion",
+        "4": "dex",
+        "5": "maps"
+      };
+
+      if (desktopShortcut && key in panelByKey) {
+        event.preventDefault();
+        setPanel(panelByKey[key]);
+        return;
+      }
+
+      if (desktopShortcut && key === "q") {
+        event.preventDefault();
+        returnHome();
+        return;
+      }
+
+      if (desktopShortcut && key === "w") {
+        event.preventDefault();
+        recoverAtCamp();
+        return;
+      }
+
+      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "a", "s", "d", "A", "S", "D"].includes(event.key)) {
+        event.preventDefault();
+      }
+      if (event.key === "ArrowUp") move(0, -1);
+      if (event.key === "ArrowDown" || key === "s") move(0, 1);
+      if (event.key === "ArrowLeft" || key === "a") move(-1, 0);
+      if (event.key === "ArrowRight" || key === "d") move(1, 0);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [battle, battleOutcome, game, activeMap, defeatedCurrentBoss, dexDetailSpeciesId]);
+
+  const switchMap = (mapId: string) => {
+    if (!game.unlockedMaps.includes(mapId)) return;
+    setGame((current) => setActiveMap(current, mapId));
+    setPanel("maps");
+  };
+
+  const moveToStorage = (uid: string) => {
+    setGame((current) => {
+      if (current.party.length <= 1) return addLog(current, "至少保留一只出战宠物。");
+      const pet = current.party.find((item) => item.uid === uid);
+      if (!pet) return current;
+      return addLog(
+        {
+          ...current,
+          party: current.party.filter((item) => item.uid !== uid),
+          storage: [...current.storage, pet]
+        },
+        `${getPetSpecies(pet.speciesId).name}进入仓库。`
+      );
+    });
+  };
+
+  const moveToParty = (uid: string) => {
+    setGame((current) => {
+      if (current.party.length >= 3) return addLog(current, "出战队伍已满。");
+      const pet = current.storage.find((item) => item.uid === uid);
+      if (!pet) return current;
+      return addLog(
+        {
+          ...current,
+          party: [...current.party, pet],
+          storage: current.storage.filter((item) => item.uid !== uid)
+        },
+        `${getPetSpecies(pet.speciesId).name}加入队伍。`
+      );
+    });
+  };
+
+  const useFruit = (uid: string) => {
+    setGame((current) => {
+      if (current.inventory.healingFruits <= 0) return addLog(current, "治疗果不足。");
+      const party = current.party.map((pet) => {
+        if (pet.uid !== uid) return pet;
+        return {
+          ...pet,
+          currentHp: Math.min(getMaxHp(pet), pet.currentHp + Math.round(getMaxHp(pet) * 0.45))
+        };
+      });
+      return addLog(
+        {
+          ...current,
+          party,
+          inventory: {
+            ...current.inventory,
+            healingFruits: current.inventory.healingFruits - 1
+          }
+        },
+        "使用了治疗果。"
+      );
+    });
+  };
+
+  const decomposePet = (uid: string) => {
+    setGame((current) => {
+      const pet = current.storage.find((item) => item.uid === uid);
+      if (!pet) return addLog(current, "出战中的宠物不可分解。");
+      const species = getPetSpecies(pet.speciesId);
+      const crystals = decomposeCrystalValue(pet);
+      return addLog(
+        {
+          ...current,
+          storage: current.storage.filter((item) => item.uid !== uid),
+          inventory: {
+            ...current.inventory,
+            crystals: current.inventory.crystals + crystals
+          }
+        },
+        `${species.name}分解为分解水晶 x${crystals}。`
+      );
+    });
+  };
+
+  const enhancePet = (uid: string) => {
+    setGame((current) => {
+      const targetPet = [...current.party, ...current.storage].find((item) => item.uid === uid);
+      if (!targetPet) return current;
+      const species = getPetSpecies(targetPet.speciesId);
+      if (species.growthLevel !== 3) return addLog(current, "只有完全体宠物可以强化。");
+      const currentEnhance = targetPet.enhanceLevel ?? 0;
+      const cost = enhancementCostForNext(currentEnhance);
+      if (!cost) return addLog(current, "强化已经达到上限。");
+      if (current.inventory.crystals < cost) return addLog(current, "分解水晶不足。");
+
+      const upgrade = (pet: PetInstance): PetInstance => {
+        if (pet.uid !== uid) return pet;
+        const oldMaxHp = getMaxHp(pet);
+        const nextPet = { ...pet, enhanceLevel: currentEnhance + 1 };
+        const newMaxHp = getMaxHp(nextPet);
+        return {
+          ...nextPet,
+          currentHp: Math.min(newMaxHp, pet.currentHp + Math.max(0, newMaxHp - oldMaxHp))
+        };
+      };
+
+      return addLog(
+        {
+          ...current,
+          party: current.party.map(upgrade),
+          storage: current.storage.map(upgrade),
+          inventory: {
+            ...current.inventory,
+            crystals: current.inventory.crystals - cost
+          }
+        },
+        `${species.name}强化到 +${currentEnhance + 1}。`
+      );
+    });
+  };
+
+  const handleFuse = () => {
+    if (fusionPick.length !== 2) return;
+    const result = fusePets(game, fusionPick[0], fusionPick[1]);
+    setGame(result.state === game ? addLog(result.state, result.message) : result.state);
+    setFusionPick([]);
+  };
+
+  const resetGame = () => {
+    const ok = window.confirm(language === "ja" ? "最初から始めると現在のローカル進行状況が削除されます。" : "重新开始会清除当前本地进度。");
+    if (!ok) return;
+    clearSave();
+    setBattle(null);
+    setBattleOutcome(null);
+    setFusionPick([]);
+    setGame(loadGame());
+  };
+
+  const fusionCandidates = allPets(game);
+  const selectedFusionPets = fusionPick.map((uid) => fusionCandidates.find((pet) => pet.uid === uid)).filter(Boolean) as PetInstance[];
+  const fusionCheck = selectedFusionPets.length === 2 ? canFuse(selectedFusionPets[0], selectedFusionPets[1]) : undefined;
+
+  const discoveredCount = game.discoveredSpecies.length;
+  const ownedCount = game.ownedSpecies.length;
+  const syncedGame = useMemo(() => syncUnlocks(game), [game]);
+
+  return (
+    <main className="app-shell">
+      <header className="topbar">
+        <div className="brand">
+          <span className="brand-mark">契</span>
+          <div>
+            <h1>{t(language, "appTitle")}</h1>
+            <span>{t(language, "demoVersion")}</span>
+          </div>
+        </div>
+        <div className="top-actions">
+          <button
+            className="language-button"
+            onClick={() => setLanguage((current) => (current === "zh" ? "ja" : "zh"))}
+            title={t(language, "language")}
+          >
+            <Languages size={18} />
+            <span>{language === "zh" ? t(language, "japanese") : t(language, "chinese")}</span>
+          </button>
+          <button className="square-button" onClick={() => saveGame(game)} title={t(language, "save")}>
+            <Save size={18} />
+          </button>
+          <button className="square-button" onClick={resetGame} title={t(language, "reset")}>
+            <RotateCcw size={18} />
+          </button>
+        </div>
+      </header>
+
+      <section className="dashboard">
+        <div className="left-column">
+          <MapView
+            map={activeMap}
+            position={game.position}
+            defeated={defeatedCurrentBoss}
+            language={language}
+            onHeal={() => setGame((current) => healParty(current))}
+            onReturnHome={returnHome}
+            onBoss={() => startBattle(createBossBattle(game))}
+          />
+
+          <div className="dpad">
+            <button onClick={() => move(0, -1)}>↑</button>
+            <button onClick={() => move(-1, 0)}>←</button>
+            <button onClick={() => move(0, 1)}>↓</button>
+            <button onClick={() => move(1, 0)}>→</button>
+          </div>
+        </div>
+
+        <aside className="right-column">
+          <section className="resource-panel">
+            <div>
+              <span>{t(language, "captureStone")}</span>
+              <strong>{game.inventory.captureStones}</strong>
+            </div>
+            <div>
+              <span>{t(language, "healingFruit")}</span>
+              <strong>{game.inventory.healingFruits}</strong>
+            </div>
+            <div>
+              <span>{t(language, "crystal")}</span>
+              <strong>{game.inventory.crystals}</strong>
+            </div>
+            <div>
+              <span>{t(language, "dex")}</span>
+              <strong>{ownedCount}/{PETS.length}</strong>
+            </div>
+            <div>
+              <span>{t(language, "fusion")}</span>
+              <strong>{game.fusionCount}</strong>
+            </div>
+          </section>
+
+          <nav className="panel-tabs">
+            <button className={panel === "party" ? "active" : ""} onClick={() => setPanel("party")}>
+              <ShortcutHint value="1" />
+              <PawPrint size={17} /> {t(language, "party")}
+            </button>
+            <button className={panel === "storage" ? "active" : ""} onClick={() => setPanel("storage")}>
+              <ShortcutHint value="2" />
+              <Archive size={17} /> {t(language, "storage")}
+            </button>
+            <button className={panel === "fusion" ? "active" : ""} onClick={() => setPanel("fusion")}>
+              <ShortcutHint value="3" />
+              <Shuffle size={17} /> {t(language, "fusion")}
+            </button>
+            <button className={panel === "dex" ? "active" : ""} onClick={() => setPanel("dex")}>
+              <ShortcutHint value="4" />
+              <BookOpen size={17} /> {t(language, "dex")}
+            </button>
+            <button className={panel === "maps" ? "active" : ""} onClick={() => setPanel("maps")}>
+              <ShortcutHint value="5" />
+              <Map size={17} /> {t(language, "maps")}
+            </button>
+          </nav>
+
+          <section className="panel-body">
+            {panel === "party" ? (
+              <div className="panel-stack">
+                {game.party.map((pet) => {
+                  const species = getPetSpecies(pet.speciesId);
+                  const enhanceCost = enhancementCostForNext(pet.enhanceLevel ?? 0);
+                  const canEnhance = species.growthLevel === 3 && Boolean(enhanceCost) && game.inventory.crystals >= (enhanceCost ?? 0);
+                  return (
+                    <PetCard
+                      key={pet.uid}
+                      pet={pet}
+                      language={language}
+                      actions={
+                        <>
+                          <button onClick={() => useFruit(pet.uid)}>
+                            <HeartPulse size={16} /> {t(language, "heal")}
+                          </button>
+                          <button onClick={() => moveToStorage(pet.uid)}>{t(language, "store")}</button>
+                          <button
+                            onClick={() => enhancePet(pet.uid)}
+                            disabled={species.growthLevel !== 3 || !enhanceCost || !canEnhance}
+                            title={enhanceCost ? `${t(language, "enhance")} ${enhanceCost} ${t(language, "crystal")}` : t(language, "maxEnhance")}
+                          >
+                            <ChevronUp size={16} /> {t(language, "enhance")}
+                          </button>
+                          <button disabled title={t(language, "partyCannotDecompose")}>
+                            <Trash2 size={16} /> {t(language, "decompose")}
+                          </button>
+                        </>
+                      }
+                    />
+                  );
+                })}
+              </div>
+            ) : null}
+
+            {panel === "storage" ? (
+              <div className="panel-stack">
+                {game.storage.length ? (
+                  game.storage.map((pet) => {
+                    const species = getPetSpecies(pet.speciesId);
+                    const enhanceCost = enhancementCostForNext(pet.enhanceLevel ?? 0);
+                    const canEnhance = species.growthLevel === 3 && Boolean(enhanceCost) && game.inventory.crystals >= (enhanceCost ?? 0);
+                    return (
+                      <PetCard
+                        key={pet.uid}
+                        pet={pet}
+                        language={language}
+                        compact
+                        actions={
+                          <>
+                            <button onClick={() => moveToParty(pet.uid)}>{t(language, "deploy")}</button>
+                            <button
+                              onClick={() => enhancePet(pet.uid)}
+                              disabled={species.growthLevel !== 3 || !enhanceCost || !canEnhance}
+                              title={enhanceCost ? `${t(language, "enhance")} ${enhanceCost} ${t(language, "crystal")}` : t(language, "maxEnhance")}
+                            >
+                              <ChevronUp size={16} /> {t(language, "enhance")}
+                            </button>
+                            <button onClick={() => decomposePet(pet.uid)}>
+                              <Trash2 size={16} /> {t(language, "decompose")}
+                            </button>
+                          </>
+                        }
+                      />
+                    );
+                  })
+                ) : (
+                  <p className="empty-text">{t(language, "emptyStorage")}</p>
+                )}
+              </div>
+            ) : null}
+
+            {panel === "fusion" ? (
+              <div className="fusion-panel">
+                <div className="fusion-status">
+                  <Sparkles size={18} />
+                  {fusionPick.length < 2 ? t(language, "fusionHint") : fusionCheck?.ok ? t(language, "canFuse") : fusionReason(language, fusionCheck?.reason)}
+                </div>
+                <div className="fusion-grid">
+                  {fusionCandidates.map((pet) => {
+                    const picked = fusionPick.includes(pet.uid);
+                    return (
+                      <button
+                        className={`fusion-card ${picked ? "picked" : ""}`}
+                        key={pet.uid}
+                        onClick={() =>
+                          setFusionPick((current) => {
+                            if (current.includes(pet.uid)) return current.filter((uid) => uid !== pet.uid);
+                            if (current.length >= 2) return [current[1], pet.uid];
+                            return [...current, pet.uid];
+                          })
+                        }
+                      >
+                        <PetCard pet={pet} language={language} compact />
+                      </button>
+                    );
+                  })}
+                </div>
+                <button className="primary wide" disabled={!fusionCheck?.ok} onClick={handleFuse}>
+                  <Shuffle size={17} /> {t(language, "confirmFusion")}
+                </button>
+              </div>
+            ) : null}
+
+            {panel === "dex" ? (
+              <div className="dex-grid">
+                {PETS.map((species) => {
+                  const owned = game.ownedSpecies.includes(species.id);
+                  const seen = game.discoveredSpecies.includes(species.id);
+                  return (
+                    <button
+                      className={`dex-card ${owned ? "owned" : seen ? "seen" : "unknown"}`}
+                      key={species.id}
+                      type="button"
+                      disabled={!seen}
+                      onClick={() => setDexDetailSpeciesId(species.id)}
+                      title={seen ? t(language, "dexDetail") : t(language, "unknownEcology")}
+                    >
+                      {seen ? (
+                        <PixelPetSprite speciesId={species.id} element={species.element} growthLevel={species.growthLevel} size="small" />
+                      ) : (
+                        <span className="unknown-sprite">?</span>
+                      )}
+                      <strong>{seen ? petName(language, species.id, species.name) : t(language, "unknown")}</strong>
+                      <small>{seen ? `${growthLabel(language, species.growthLevel)} · ${roleText(language, species.role)}` : t(language, "unknownEcology")}</small>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+
+            {panel === "maps" ? (
+              <div className="map-list">
+                {MAPS.map((mapItem) => {
+                  const unlocked = syncedGame.unlockedMaps.includes(mapItem.id);
+                  const defeated = game.defeatedBosses.includes(mapItem.id);
+                  return (
+                    <button
+                      className={`map-list-item ${game.activeMapId === mapItem.id ? "active" : ""}`}
+                      key={mapItem.id}
+                      disabled={!unlocked}
+                      onClick={() => switchMap(mapItem.id)}
+                    >
+                      <span className="pet-token" style={{ background: ELEMENT_COLORS[mapItem.element] }}>
+                        {elementLabel(language, mapItem.element)}
+                      </span>
+                      <div>
+                        <strong>{mapName(language, mapItem.id, mapItem.name)}</strong>
+                        <small>{unlocked ? (defeated ? t(language, "bossDefeated") : t(language, "explorable")) : unlockText(language, mapItem.id)}</small>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+          </section>
+        </aside>
+      </section>
+
+      <section className="quest-strip">
+        <div>
+          <Footprints size={17} />
+          {t(language, "ownedProgress")} {discoveredCount}/{PETS.length}
+        </div>
+        <div>
+          <Shuffle size={17} />
+          {t(language, "initialFusion")} {game.firstLv1FusionDone ? t(language, "done") : t(language, "notDone")}
+        </div>
+        <div>
+          <Sparkles size={17} />
+          {t(language, "evolvedFusion")} {game.firstLv2FusionDone ? t(language, "done") : t(language, "notDone")}
+        </div>
+      </section>
+
+      <section className="log-panel">
+        {game.log.slice(0, 8).map((line, index) => (
+          <p key={`${line}-${index}`}>{translateLog(language, line)}</p>
+        ))}
+      </section>
+
+      {game.party.length === 0 ? <StarterOverlay language={language} onChoose={(speciesId) => setGame((current) => chooseStarter(current, speciesId))} /> : null}
+
+      {battle ? (
+        <BattleView
+          key={battle.id}
+          battle={battle}
+          language={language}
+          captureStones={game.inventory.captureStones}
+          onUseSkill={handleUseSkill}
+          onDefend={handleDefend}
+          onEnemyAct={handleEnemyAct}
+          onCapture={handleCapture}
+          outcome={battleOutcome}
+          onConfirmDefeat={() => {
+            setGame((current) => applyDefeat(current));
+            setBattle(null);
+            setBattleOutcome(null);
+          }}
+          onRun={() => {
+            if (!battle.isBoss) {
+              setGame((current) => addLog(current, "脱离了战斗。"));
+              setBattle(null);
+              setBattleOutcome(null);
+            }
+          }}
+        />
+      ) : null}
+
+      {dexDetailSpeciesId ? <DexDetailModal speciesId={dexDetailSpeciesId} language={language} onClose={() => setDexDetailSpeciesId(null)} /> : null}
+    </main>
+  );
+}
