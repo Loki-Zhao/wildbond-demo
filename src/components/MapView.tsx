@@ -1,4 +1,4 @@
-import { Home, MapPin, ShieldPlus, Swords } from "lucide-react";
+import { Home, Info, MapPin, ShieldPlus, Swords } from "lucide-react";
 import type { CSSProperties } from "react";
 import { ELEMENT_COLORS } from "../game/balance";
 import { distance, getTerrainAt } from "../game/mapLogic";
@@ -16,6 +16,7 @@ interface MapViewProps {
   language: Language;
   onHeal: () => void;
   onReturnHome: () => void;
+  onGuide: () => void;
   onBoss: () => void;
 }
 
@@ -27,7 +28,7 @@ const detailVariant = (x: number, y: number, mapId: string): number => {
   return Math.abs((x * 37 + y * 61 + seed) % 5);
 };
 
-export function MapView({ map, position, defeated, bossChallengeLevel, maxBossChallengeLevel, language, onHeal, onReturnHome, onBoss }: MapViewProps) {
+export function MapView({ map, position, defeated, bossChallengeLevel, maxBossChallengeLevel, language, onHeal, onReturnHome, onGuide, onBoss }: MapViewProps) {
   const startX = position.x - Math.floor(viewWidth / 2);
   const startY = position.y - Math.floor(viewHeight / 2);
   const tiles = [];
@@ -128,6 +129,10 @@ export function MapView({ map, position, defeated, bossChallengeLevel, maxBossCh
           <ShortcutHint value="W" />
           <ShieldPlus size={18} />
           {t(language, "campHeal")}
+        </button>
+        <button className="icon-button guide-action" onClick={onGuide} title={t(language, "gameGuide")}>
+          <Info size={18} />
+          {t(language, "gameGuide")}
         </button>
         <button className="icon-button danger" disabled={bossChallengeDisabled} onClick={onBoss} title={bossChallengeTitle}>
           <Swords size={18} />

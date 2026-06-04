@@ -140,10 +140,16 @@ export function BattleView({
   const [effect, setEffect] = useState<BattleAnimation | null>(null);
   const [busy, setBusy] = useState(false);
   const [pendingSkill, setPendingSkill] = useState<PendingSkillTarget | null>(null);
+  const [showEncounterNotice, setShowEncounterNotice] = useState(true);
   const { bindSkillInfo, skillInfoPopup } = useSkillInfo();
   const resolved = outcome === "defeat";
   const skills = activeAlly ? getPetSpecies(activeAlly.speciesId).skillIds.map(getSkill) : [];
   const canPlayerAct = Boolean(activeAlly && activeAlly.currentHp > 0 && !activeAlly.acted && !busy && !resolved);
+  const encounterNoticeText = battle.bossChallengeLevel
+    ? t(language, "enhancedBossAppeared")
+    : battle.isBoss
+      ? t(language, "mapBossAppeared")
+      : t(language, "wildPetsAppeared");
 
   const queueEffect = (nextEffect: BattleAnimation) => {
     setEffect(nextEffect);
@@ -163,6 +169,12 @@ export function BattleView({
       setSelectedEnemyId(battle.enemies.find((unit) => unit.currentHp > 0)?.id);
     }
   }, [activeAlly?.id, battle.allies, battle.enemies, selectedEnemyId, selectedFriendId]);
+
+  useEffect(() => {
+    setShowEncounterNotice(true);
+    const timer = window.setTimeout(() => setShowEncounterNotice(false), 2000);
+    return () => window.clearTimeout(timer);
+  }, [battle.id]);
 
   useEffect(() => {
     if (resolved || !activeUnit || activeUnit.side !== "enemy" || activeUnit.currentHp <= 0) return;
@@ -306,6 +318,7 @@ export function BattleView({
         </div>
 
         <div className="battle-field dedicated-battlefield">
+          {showEncounterNotice ? <div className="encounter-notice">{encounterNoticeText}</div> : null}
           {effect ? <SkillEffect id={effect.id} element={effect.element} category={effect.category} sourceSide={effect.sourceSide} /> : null}
           <div className="battle-side ally-side">
             <h3>{t(language, "allyLine")}</h3>

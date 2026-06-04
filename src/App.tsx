@@ -5,7 +5,6 @@ import {
   Footprints,
   Gem,
   HeartPulse,
-  Info,
   Languages,
   Map,
   PawPrint,
@@ -19,6 +18,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { BattleView } from "./components/BattleView";
+import { GameGuide } from "./components/GameGuide";
 import { MapView } from "./components/MapView";
 import { PixelPetSprite } from "./components/PixelSprite";
 import { ShortcutHint } from "./components/ShortcutHint";
@@ -246,6 +246,7 @@ export function App() {
   const [panel, setPanel] = useState<PanelId>("party");
   const [fusionPick, setFusionPick] = useState<string[]>([]);
   const [dexDetailSpeciesId, setDexDetailSpeciesId] = useState<string | null>(null);
+  const [guideOpen, setGuideOpen] = useState(false);
   const [language, setLanguage] = useState<Language>(() => readStoredLanguage());
 
   const activeMap = getMapDefinition(game.activeMapId);
@@ -565,6 +566,7 @@ export function App() {
     setBattle(null);
     setBattleOutcome(null);
     setFusionPick([]);
+    setGuideOpen(false);
     setGame(loadGame());
   };
 
@@ -615,6 +617,7 @@ export function App() {
             language={language}
             onHeal={() => setGame((current) => healParty(current))}
             onReturnHome={returnHome}
+            onGuide={() => setGuideOpen(true)}
             onBoss={() => {
               if (!defeatedCurrentBoss || currentBossChallengeLevel >= MAX_BOSS_CHALLENGE_LEVEL) return;
               startBattle(createBossBattle(game, currentBossChallengeLevel + 1));
@@ -885,6 +888,7 @@ export function App() {
         />
       ) : null}
 
+      {guideOpen ? <GameGuide language={language} onClose={() => setGuideOpen(false)} /> : null}
       {dexDetailSpeciesId ? <DexDetailModal speciesId={dexDetailSpeciesId} language={language} onClose={() => setDexDetailSpeciesId(null)} /> : null}
     </main>
   );

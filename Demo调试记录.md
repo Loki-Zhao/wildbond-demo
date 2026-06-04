@@ -531,3 +531,24 @@ https://healthcare-actively-platforms-ranger.trycloudflare.com
 - `scripts/elementMatchupRegression.ts` 回归通过，确认属性相克伤害公式未受强化挑战改动影响。
 - `scripts/bossChallengeSimulation.ts 80 recommended` 完成；玩家 3 只对应强化等级完全体队伍挑战 +1/+2/+3 强化首领均有可胜空间，其中火山与高地保留较高压力。
 - `scripts/bossChallengeSimulation.ts 3 search` 完成；+1 到 +3、五张地图均找到稳定可胜混合阵容。
+
+## 30. 战斗入场提示与游戏方式说明 v2.6
+
+已完成：
+
+- 战斗场景新增 2 秒入场提示，不写入战斗日志，避免打断原有战斗节奏。
+- 普通暗雷显示“野生宠物出现了”，普通首领显示“地图首领出现了”，强化首领挑战显示“强化过的首领出现了”。
+- 地图操作区新增“游戏方式说明”按钮，位置与一键回城、营地恢复、首领强化挑战保持同一操作区域。
+- 游戏方式说明采用左侧类别、右侧详情结构；手机端自动改为顶部横向类别标签，详情区域滚动阅读。
+- 说明内容覆盖冒险目标、野外探索、属性相克、战斗基础、培养合成、首领准备等新手上手信息。
+- 属性相克说明同步当前规则：火克森/弱水，水克火/弱森，森克水/弱火，土克风/弱森，风克土/弱火。
+- 说明弹窗支持中文与日语，语言切换后再次打开会显示对应语言内容。
+
+已检查：
+
+- `./.tools/bin/npm run build` 通过，生成 JS `index-ba969c33.js`、CSS `index-ab1ea142.css`。
+- `GITHUB_PAGES=true ./.tools/bin/npm run build` 通过，确认 GitHub Pages 子路径构建正常。
+- `scripts/gameplaySystemsRegression.ts` 回归通过，包含暴击、属性分配、强化经济、速度行动顺序、野外遇敌距离分段、遇敌保底、技能组与首领强化进度等检查。
+- `scripts/bossDefenseRegression.ts` 回归通过，确认 Boss 战防御循环旧问题未回归。
+- `scripts/elementMatchupRegression.ts` 回归通过，确认优势 120%、劣势 80%、同属性/无相克 100% 的伤害倍率仍作用在基础攻防结算之后。
+- 本地预览 `http://127.0.0.1:5173/` 可正常返回页面入口。
