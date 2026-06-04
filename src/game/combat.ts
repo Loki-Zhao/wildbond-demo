@@ -21,6 +21,7 @@ import { createPetInstance, markSpecies, syncUnlocks } from "./state";
 import type { BattleResult, BattleState, BattleUnit, EncounterEntry, GameState, GrowthLevel, MapDefinition, PetInstance, Skill } from "./types";
 
 export const BOSS_COMPLETE_STAT_MULTIPLIER = 1.25;
+export const CAPTURE_STONE_DROP_RATE = 0.6;
 
 const weightedPick = <T extends { weight: number }>(entries: T[]): T => {
   const total = entries.reduce((sum, entry) => sum + entry.weight, 0);
@@ -730,7 +731,7 @@ export const finishBattle = (game: GameState, battle: BattleState, options?: { b
     inventory.healingFruits += 1;
     dropMessages.push("获得治疗果 x1。");
   }
-  if (Math.random() < 0.3) {
+  if (Math.random() < CAPTURE_STONE_DROP_RATE) {
     inventory.captureStones += 1;
     dropMessages.push("获得捕获石 x1。");
   }

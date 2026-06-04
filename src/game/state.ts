@@ -3,6 +3,8 @@ import { PETS, STARTER_SPECIES_IDS, getPetSpecies } from "../data/pets";
 import { clampPetLevel, getMaxHp } from "./balance";
 import type { GameState, Inventory, PetInstance } from "./types";
 
+export const STARTER_EXP_LEVEL = 3;
+
 const defaultInventory = (): Inventory => ({
   captureStones: 12,
   healingFruits: 6,
@@ -36,6 +38,7 @@ export const createInitialState = (): GameState => ({
   storage: [],
   activeMapId: "meadow",
   position: { ...getMapDefinition("meadow").camp },
+  stepsSinceEncounter: 0,
   unlockedMaps: ["meadow"],
   defeatedBosses: [],
   discoveredSpecies: STARTER_SPECIES_IDS,
@@ -94,6 +97,7 @@ export const setActiveMap = (state: GameState, mapId: string): GameState => {
     ...state,
     activeMapId: mapId,
     position: { ...map.camp },
+    stepsSinceEncounter: 0,
     log: [`抵达${map.name}。`, ...state.log].slice(0, 80)
   };
 };
@@ -116,7 +120,7 @@ export const addPetToCollection = (state: GameState, pet: PetInstance): GameStat
 };
 
 export const chooseStarter = (state: GameState, speciesId: string): GameState => {
-  const starter = createPetInstance(speciesId, 1);
+  const starter = createPetInstance(speciesId, STARTER_EXP_LEVEL);
   const species = getPetSpecies(speciesId);
   return syncUnlocks(
     markSpecies(

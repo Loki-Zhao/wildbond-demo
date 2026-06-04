@@ -49,6 +49,15 @@ export const getEncounterRateForTerrain = (map: MapDefinition, terrain: TerrainT
   return 0;
 };
 
+export const getStepAdjustedEncounterRate = (baseRate: number, stepsSinceEncounter: number): number => {
+  if (baseRate <= 0) return 0;
+  const steps = Math.max(1, Math.round(stepsSinceEncounter));
+  if (steps >= 15) return 1;
+  const steadyPressure = Math.max(0, steps - 3) * 0.045;
+  const latePressure = Math.max(0, steps - 9) * 0.07;
+  return Math.max(baseRate, Math.min(0.9, baseRate + steadyPressure + latePressure));
+};
+
 export const canMoveTo = (map: MapDefinition, x: number, y: number): boolean => {
   if (!isInsideMap(map, x, y)) return false;
   return true;

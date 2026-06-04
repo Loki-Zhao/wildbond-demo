@@ -452,3 +452,22 @@ https://healthcare-actively-platforms-ranger.trycloudflare.com
 - `./.tools/bin/npm run build` 通过，生成 JS `index-613b238a.js`、CSS `index-e97c87a6.css`。
 - `scripts/gameplaySystemsRegression.ts` 回归通过，包含近营地 20 次抽样不出现进化体、不超过 Lv2、敌人数量固定 1 只。
 - `scripts/bossDefenseRegression.ts` 回归通过。
+
+## 27. 开局与暗雷频率优化 v2.3
+
+已完成：
+
+- 每张地图基础遇敌率提高：普通草地约 10%-12%，稀有/危险地形约 13%-16%。
+- 新增连续可遇敌地形移动计数；连续未遇敌时概率逐步提高，第 10 步左右明显提高，第 15 步必定触发普通暗雷。
+- 普通暗雷或 Boss 战触发后，连续移动计数归零；营地、道路、水域等安全地形不推进保底计数。
+- 捕获石胜利掉落率从 30% 提高到 60%，治疗果仍保持 30%。
+- 开局选择任意初始宠物时，宠物个体等级统一为 Lv3。
+- 初始宠物选择界面显示 `Lv3`，避免玩家误以为仍从 Lv1 开始。
+- `scripts/gameplaySystemsRegression.ts` 新增遇敌保底曲线、初始宠物 Lv3、捕获石 60% 掉落配置检查。
+
+已检查：
+
+- `./.tools/bin/npm run build` 通过，生成 JS `index-75a89595.js`、CSS `index-e97c87a6.css`。
+- `GITHUB_PAGES=true ./.tools/bin/npm run build` 通过，确认 GitHub Pages 子路径构建正常。
+- `scripts/gameplaySystemsRegression.ts` 回归通过，包含遇敌保底曲线、初始宠物 Lv3、捕获石 60% 掉落配置检查。
+- `scripts/bossDefenseRegression.ts` 回归通过。

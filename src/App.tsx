@@ -49,7 +49,7 @@ import {
   useSkill
 } from "./game/combat";
 import { canFuse, fusePets } from "./game/fusion";
-import { canMoveTo, distance, getEncounterRateForTerrain, getTerrainAt } from "./game/mapLogic";
+import { canMoveTo, distance, getEncounterRateForTerrain, getStepAdjustedEncounterRate, getTerrainAt } from "./game/mapLogic";
 import { clearSave, loadGame, saveGame } from "./game/save";
 import { addLog, addPetToCollection, chooseStarter, healParty, setActiveMap, syncUnlocks } from "./game/state";
 import type { BattleState, GameState, PetInstance } from "./game/types";
@@ -166,7 +166,7 @@ function StarterOverlay({ language, onChoose }: { language: Language; onChoose: 
                 <PixelPetSprite speciesId={species.id} element={species.element} growthLevel={species.growthLevel} size="large" active />
                 <strong>{petName(language, species.id, species.name)}</strong>
                 <small>
-                  {elementLabel(language, species.element)} · {roleText(language, species.role)}
+                  {elementLabel(language, species.element)} · Lv3 · {roleText(language, species.role)}
                 </small>
               </button>
             );
@@ -273,22 +273,30 @@ export function App() {
     if (!canMoveTo(activeMap, nextX, nextY)) return;
 
     const terrain = getTerrainAt(activeMap, nextX, nextY);
-    const rate = getEncounterRateForTerrain(activeMap, terrain);
+    const baseRate = getEncounterRateForTerrain(activeMap, terrain);
+    const stepsSinceEncounter = baseRate > 0 ? game.stepsSinceEncounter + 1 : game.stepsSinceEncounter;
     const moved = {
       ...game,
-      position: { x: nextX, y: nextY }
+      position: { x: nextX, y: nextY },
+      stepsSinceEncounter
     };
 
-    setGame(moved);
-
     if (distance({ x: nextX, y: nextY }, activeMap.boss) <= 1 && !defeatedCurrentBoss) {
-      startBattle(createBossBattle(moved));
+      const battleState = { ...moved, stepsSinceEncounter: 0 };
+      setGame(battleState);
+      startBattle(createBossBattle(battleState));
       return;
     }
 
+    const rate = getStepAdjustedEncounterRate(baseRate, stepsSinceEncounter);
     if (rate > 0 && Math.random() < rate) {
-      startBattle(createWildBattle(moved));
+      const battleState = { ...moved, stepsSinceEncounter: 0 };
+      setGame(battleState);
+      startBattle(createWildBattle(battleState));
+      return;
     }
+
+    setGame(moved);
   };
 
   const handleBattleResult = (resultBattle: BattleState, victory?: boolean, defeat?: boolean) => {

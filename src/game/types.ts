@@ -116,6 +116,7 @@ export interface GameState {
   storage: PetInstance[];
   activeMapId: string;
   position: { x: number; y: number };
+  stepsSinceEncounter: number;
   unlockedMaps: string[];
   defeatedBosses: string[];
   discoveredSpecies: string[];

@@ -13,6 +13,7 @@ import {
   MAX_PET_LEVEL
 } from "../src/game/balance";
 import {
+  CAPTURE_STONE_DROP_RATE,
   advanceBattleTurn,
   createBossBattle,
   createWildBattle,
@@ -22,7 +23,8 @@ import {
   wildEncounterCandidatesForPosition,
   wildEncounterProfileForPosition
 } from "../src/game/combat";
-import { createInitialState, createPetInstance } from "../src/game/state";
+import { getStepAdjustedEncounterRate } from "../src/game/mapLogic";
+import { STARTER_EXP_LEVEL, chooseStarter, createInitialState, createPetInstance } from "../src/game/state";
 import type { BattleUnit, ElementType } from "../src/game/types";
 
 const assert = (condition: unknown, message: string): void => {
@@ -131,10 +133,51 @@ const assertWildEncounterDistanceBands = (): void => {
   }
 };
 
+const assertEncounterPityCurve = (): void => {
+  for (const map of MAPS) {
+    const firstStepRate = getStepAdjustedEncounterRate(map.encounterRate, 1);
+    const tenthStepRate = getStepAdjustedEncounterRate(map.encounterRate, 10);
+    const fourteenthStepRate = getStepAdjustedEncounterRate(map.encounterRate, 14);
+    const fifteenthStepRate = getStepAdjustedEncounterRate(map.encounterRate, 15);
+
+    assert(map.encounterRate >= 0.1, `${map.id}: base encounter rate should support frequent wild battles`);
+    assert(firstStepRate === map.encounterRate, `${map.id}: first eligible step should use base encounter rate`);
+    assert(tenthStepRate > firstStepRate, `${map.id}: tenth eligible step should have higher encounter pressure`);
+    assert(fourteenthStepRate >= 0.9, `${map.id}: fourteenth eligible step should be near guaranteed`);
+    assert(fifteenthStepRate === 1, `${map.id}: fifteenth eligible step should guarantee encounter`);
+  }
+};
+
+const assertStarterAndRewardTuning = (): void => {
+  const starterState = chooseStarter(createInitialState(), "fire-lizard");
+  assert(starterState.party[0]?.expLevel === STARTER_EXP_LEVEL, "starter should begin at configured Lv3");
+  assert(starterState.party[0]?.currentHp > 0, "starter should begin with current HP");
+  assert(CAPTURE_STONE_DROP_RATE === 0.6, "capture stone drop rate should be 60%");
+};
+
 assertCritRange();
 assertElementProfiles();
 assertEnhancementEconomy();
 assertSpeedTurnOrder();
 assertWildEncounterDistanceBands();
+assertEncounterPityCurve();
+assertStarterAndRewardTuning();
 
-console.log(JSON.stringify({ ok: true, checked: ["crit", "elementProfiles", "enhancementEconomy", "speedTurnOrder", "wildEncounterDistanceBands"] }, null, 2));
+console.log(
+  JSON.stringify(
+    {
+      ok: true,
+      checked: [
+        "crit",
+        "elementProfiles",
+        "enhancementEconomy",
+        "speedTurnOrder",
+        "wildEncounterDistanceBands",
+        "encounterPityCurve",
+        "starterAndRewardTuning"
+      ]
+    },
+    null,
+    2
+  )
+);

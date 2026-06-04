@@ -44,6 +44,7 @@ export const loadGame = (): GameState => {
       },
       party: normalizePets(parsed.party),
       storage: normalizePets(parsed.storage),
+      stepsSinceEncounter: Math.max(0, Math.round(parsed.stepsSinceEncounter ?? initial.stepsSinceEncounter)),
       log: parsed.log?.length ? parsed.log : ["读取了本地进度。"]
     });
   } catch {
