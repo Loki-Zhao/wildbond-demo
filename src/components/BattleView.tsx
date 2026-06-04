@@ -9,6 +9,7 @@ import { elementLabel, petName, skillName, skillTooltip, statusLabel, t, transla
 import { PixelPetSprite } from "./PixelSprite";
 import { ShortcutHint } from "./ShortcutHint";
 import { SkillEffect } from "./SkillEffect";
+import { useSkillInfo } from "./SkillInfo";
 
 interface BattleViewProps {
   battle: BattleState;
@@ -139,6 +140,7 @@ export function BattleView({
   const [effect, setEffect] = useState<BattleAnimation | null>(null);
   const [busy, setBusy] = useState(false);
   const [pendingSkill, setPendingSkill] = useState<PendingSkillTarget | null>(null);
+  const { bindSkillInfo, skillInfoPopup } = useSkillInfo();
   const resolved = outcome === "defeat";
   const skills = activeAlly ? getPetSpecies(activeAlly.speciesId).skillIds.map(getSkill) : [];
   const canPlayerAct = Boolean(activeAlly && activeAlly.currentHp > 0 && !activeAlly.acted && !busy && !resolved);
@@ -350,8 +352,21 @@ export function BattleView({
             {skills.map((skill, index) => {
               const shortcut = String(index + 1);
               const disabled = !canPlayerAct || activeAlly!.ap < skill.apCost;
+              const tooltip = skillTooltip(language, skill);
               return (
-                <button className="skill-button" key={skill.id} disabled={disabled} onClick={() => prepareSkillAction(skill)} title={skillTooltip(language, skill)}>
+                <button
+                  className={`skill-button ${disabled ? "is-disabled" : ""}`}
+                  key={skill.id}
+                  aria-disabled={disabled}
+                  onClick={(event) => {
+                    if (disabled) {
+                      event.preventDefault();
+                      return;
+                    }
+                    prepareSkillAction(skill);
+                  }}
+                  {...bindSkillInfo(tooltip)}
+                >
                   <ShortcutHint value={shortcut} />
                   {skill.category === "attack" ? <Swords size={17} /> : skill.category === "heal" ? <Heart size={17} /> : skill.category === "defense" ? <Shield size={17} /> : <Sparkles size={17} />}
                   <span>{skillName(language, skill.id, skill.name)}</span>
@@ -447,6 +462,7 @@ export function BattleView({
             <p key={`${line}-${index}`}>{translateLog(language, line)}</p>
           ))}
         </div>
+        {skillInfoPopup}
       </section>
     </div>
   );

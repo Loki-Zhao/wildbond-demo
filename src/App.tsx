@@ -22,6 +22,7 @@ import { BattleView } from "./components/BattleView";
 import { MapView } from "./components/MapView";
 import { PixelPetSprite } from "./components/PixelSprite";
 import { ShortcutHint } from "./components/ShortcutHint";
+import { useSkillInfo } from "./components/SkillInfo";
 import { MAPS, getMapDefinition } from "./data/maps";
 import { PETS, STARTER_SPECIES_IDS, getPetSpecies } from "./data/pets";
 import { getSkill } from "./data/skills";
@@ -101,6 +102,7 @@ function PetCard({
   language: Language;
   actions?: ReactNode;
 }) {
+  const { bindSkillInfo, skillInfoPopup } = useSkillInfo();
   const species = getPetSpecies(pet.speciesId);
   const stats = getPetStats(pet);
   const hpMax = getMaxHp(pet);
@@ -135,7 +137,7 @@ function PetCard({
             {species.skillIds.map((skillId) => {
               const skill = getSkill(skillId);
               return (
-                <span key={skill.id} title={skillTooltip(language, skill)}>
+                <span className="skill-info-trigger" key={skill.id} {...bindSkillInfo(skillTooltip(language, skill))}>
                   {skillName(language, skill.id, skill.name)}
                   <small>{skill.apCost}AP</small>
                 </span>
@@ -148,6 +150,7 @@ function PetCard({
         </>
       ) : null}
       {actions ? <div className="card-actions">{actions}</div> : null}
+      {skillInfoPopup}
     </article>
   );
 }
@@ -178,6 +181,7 @@ function StarterOverlay({ language, onChoose }: { language: Language; onChoose: 
 }
 
 function DexDetailModal({ speciesId, language, onClose }: { speciesId: string; language: Language; onClose: () => void }) {
+  const { bindSkillInfo, skillInfoPopup } = useSkillInfo();
   const species = getPetSpecies(speciesId);
   const statsLv1 = getStatsForSpecies(species.id, 1);
   const statsLv10 = getStatsForSpecies(species.id, MAX_PET_LEVEL);
@@ -221,13 +225,14 @@ function DexDetailModal({ speciesId, language, onClose }: { speciesId: string; l
           {species.skillIds.map((skillId) => {
             const skill = getSkill(skillId);
             return (
-              <span key={skill.id} title={skillTooltip(language, skill)}>
+              <span className="skill-info-trigger" key={skill.id} {...bindSkillInfo(skillTooltip(language, skill))}>
                 {skillName(language, skill.id, skill.name)}
                 <small>{skill.apCost} AP</small>
               </span>
             );
           })}
         </div>
+        {skillInfoPopup}
       </section>
     </div>
   );

@@ -20,7 +20,7 @@ import {
 import { createPetInstance, markSpecies, syncUnlocks } from "./state";
 import type { BattleResult, BattleState, BattleUnit, EncounterEntry, GameState, GrowthLevel, MapDefinition, PetInstance, Skill } from "./types";
 
-export const BOSS_COMPLETE_STAT_MULTIPLIER = 1.25;
+export const BOSS_COMPLETE_STAT_MULTIPLIER = 1.15;
 export const CAPTURE_STONE_DROP_RATE = 0.6;
 
 const weightedPick = <T extends { weight: number }>(entries: T[]): T => {
@@ -190,7 +190,7 @@ const createEnemyUnit = (speciesId: string, index: number, options?: { isBoss?: 
     speciesId,
     expLevel,
     currentHp: getBattleUnitStats({ speciesId, expLevel, statMultiplier }).hp,
-    ap: isBoss ? 2 : 1,
+    ap: 1,
     statuses: [],
     acted: false,
     isBoss,
@@ -403,8 +403,8 @@ const applySkillToTarget = (caster: BattleUnit, target: BattleUnit, skill: Skill
 
   if (skill.category === "heal" && skill.heal) {
     const targetMaxHp = getBattleUnitStats(target).hp;
-    const healRatio = skill.target === "allAllies" ? 0.12 : 0.18;
-    const amount = Math.round(skill.heal + targetMaxHp * healRatio);
+    const healRatio = skill.target === "allAllies" ? 0.1 : 0.16;
+    const amount = Math.round(skill.heal + casterStats.attack * (skill.multiplier ?? 0.45) + targetMaxHp * healRatio);
     const result = applyHeal(target, amount);
     nextTarget = result.target;
     messages.push(`${casterSpecies.name}使用${skill.name}，${targetSpecies.name}恢复${result.healed}点 HP。`);
@@ -412,12 +412,16 @@ const applySkillToTarget = (caster: BattleUnit, target: BattleUnit, skill: Skill
 
   if (skill.shield || skill.buff) {
     const buff = skill.buff;
-    if (buff) {
+    if (buff && !(skill.target === "allEnemies" && buff.id === "haste")) {
+      const value =
+        buff.id === "guard" && skill.shield
+          ? Math.round(skill.shield + casterStats.defense * (skill.multiplier ?? 0.5))
+          : buff.value ?? skill.shield;
       nextTarget = {
         ...nextTarget,
-        statuses: upsertStatus(nextTarget.statuses, makeStatus(buff.id, buff.turns, buff.value ?? skill.shield))
+        statuses: upsertStatus(nextTarget.statuses, makeStatus(buff.id, buff.turns, value))
       };
-      messages.push(`${targetSpecies.name}获得${makeStatus(buff.id, buff.turns, buff.value).name}。`);
+      messages.push(`${targetSpecies.name}获得${makeStatus(buff.id, buff.turns, value).name}。`);
     }
   }
 

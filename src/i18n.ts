@@ -294,6 +294,11 @@ const petJa: Record<string, string> = {
 };
 
 const skillJa: Record<string, string> = {
+  "fire-basic": "火苗撃",
+  "water-basic": "水花撃",
+  "forest-basic": "葉芽撃",
+  "earth-basic": "礫石撃",
+  "wind-basic": "微風撃",
   "spark-hit": "火花突撃",
   "ember-claw": "熾爪",
   "heat-guard": "熱波ガード",
@@ -327,35 +332,40 @@ const skillJa: Record<string, string> = {
 };
 
 const skillDescJa: Record<string, string> = {
-  "spark-hit": "単体小ダメージ、確率で火傷",
-  "ember-claw": "単体中ダメージ、火傷中の対象に強い",
-  "heat-guard": "自身に守護を付与",
+  "fire-basic": "基礎火属性攻撃。APを消費しない",
+  "water-basic": "基礎水属性攻撃。APを消費しない",
+  "forest-basic": "基礎森属性攻撃。APを消費しない",
+  "earth-basic": "基礎土属性攻撃。APを消費しない",
+  "wind-basic": "基礎風属性攻撃。APを消費しない",
+  "spark-hit": "単体ダメージ、確率で火傷",
+  "ember-claw": "単体中高ダメージ、火傷中の対象に強い",
+  "heat-guard": "自身に火炎の守護を付与",
   "flame-chase": "単体高ダメージ、低HP対象に追加ダメージ",
-  "volcano-call": "味方全体の行動テンポを上げる",
-  "meteor-flame": "敵全体ダメージ、確率で火傷",
-  "water-shot": "単体小ダメージ、確率で湿滑",
-  "tide-slam": "単体中ダメージ",
-  "spring-heal": "味方単体を回復",
-  "bubble-barrier": "味方単体に守護を付与",
+  "volcano-call": "敵全体に火炎ダメージ、確率で火傷",
+  "meteor-flame": "敵全体に高ダメージ、確率で火傷",
+  "water-shot": "単体ダメージ、確率で湿滑",
+  "tide-slam": "単体安定ダメージ",
+  "spring-heal": "味方単体を回復。回復量は使用者の攻撃に影響される",
+  "bubble-barrier": "味方単体に泡の守護を付与",
   "deep-silence": "敵全体の速度を下げる",
-  "sea-revive": "味方全体を回復",
-  "leaf-blade": "単体小ダメージ",
+  "sea-revive": "味方全体を回復。回復量は使用者の攻撃に影響される",
+  "leaf-blade": "単体安定ダメージ",
   "vine-bind": "単体ダメージ、確率で絡みつき",
-  sprout: "自身に再生を付与",
-  "pollen-guard": "味方単体に守護を付与",
-  "forest-echo": "味方全体に再生を付与",
-  "ancient-judgment": "単体高ダメージ、確率で防御低下",
-  "rock-chip": "単体小ダメージ、確率で防御低下",
+  sprout: "自身を少量回復し、再生を付与",
+  "pollen-guard": "味方単体に強い守護を付与",
+  "forest-echo": "味方全体を回復し、再生を付与",
+  "ancient-judgment": "単体ダメージ、確率で防御低下",
+  "rock-chip": "単体ダメージ、確率で防御低下",
   "sand-slap": "単体ダメージ、行動テンポを下げる",
   "rock-armor": "自身に岩甲を付与",
-  "earth-charge": "単体中高ダメージ、防御低下を付与",
-  "mountain-wall": "味方全体の被ダメージを軽減",
+  "earth-charge": "単体ダメージ、防御低下を付与",
+  "mountain-wall": "味方全体に岩甲の被ダメ軽減を付与",
   "meteor-quake": "敵全体ダメージ、確率で速度低下",
   "wind-blade": "単体小ダメージ、速度優位なら強化",
   "quick-peck": "素早い単体ダメージ",
   tailwind: "味方単体に疾風を付与",
   "cyclone-veil": "味方全体に軽い守護を付与",
-  "break-rush": "単体高ダメージ、決定打向き",
+  "break-rush": "単体高ダメージ、防御低下を付与。決定打向き",
   "sky-dance": "連続風刃で攻撃し加速"
 };
 
@@ -491,9 +501,9 @@ export const skillTooltip = (language: Language, skill: Skill): string => {
       );
     }
     if (skill.category === "heal" && skill.heal) {
-      parts.push(`回復: 基礎${skill.heal} + 対象最大HPの${skill.target === "allAllies" ? 12 : 18}%。`);
+      parts.push(`回復: 基礎${skill.heal} + 使用者攻撃x${skill.multiplier ?? 0.45} + 対象最大HPの${skill.target === "allAllies" ? 10 : 16}%。`);
     }
-    if (skill.shield) parts.push(`守護: ${skill.shield} ダメージ分を吸収。`);
+    if (skill.shield) parts.push(`守護: 基礎${skill.shield} + 使用者防御x${skill.multiplier ?? 0.5} 分のダメージを吸収。`);
     if (skill.buff) parts.push(`付与: ${statusLabel(language, skill.buff.id, skill.buff.id)} ${skill.buff.turns}ターン。`);
     if (skill.status) parts.push(`追加効果: ${statusLabel(language, skill.status.id, skill.status.id)} ${Math.round(skill.status.chance * 100)}%、${skill.status.turns}ターン。`);
     return parts.join("\n");
@@ -504,9 +514,9 @@ export const skillTooltip = (language: Language, skill: Skill): string => {
     parts.push(`伤害：基础${skill.power} + 攻击x${skill.multiplier ?? 1} - 目标防御x0.6；属性优势120%，劣势80%；暴击时伤害x1.5。`);
   }
   if (skill.category === "heal" && skill.heal) {
-    parts.push(`恢复：基础${skill.heal} + 目标最大HP的${skill.target === "allAllies" ? 12 : 18}%。`);
+    parts.push(`恢复：基础${skill.heal} + 施放者攻击x${skill.multiplier ?? 0.45} + 目标最大HP的${skill.target === "allAllies" ? 10 : 16}%。`);
   }
-  if (skill.shield) parts.push(`守护：吸收${skill.shield}点伤害。`);
+  if (skill.shield) parts.push(`守护：基础${skill.shield} + 施放者防御x${skill.multiplier ?? 0.5} 的伤害吸收。`);
   if (skill.buff) parts.push(`增益：${statusLabel(language, skill.buff.id, skill.buff.id)}，持续${skill.buff.turns}回合。`);
   if (skill.status) parts.push(`附加：${statusLabel(language, skill.status.id, skill.status.id)}，${Math.round(skill.status.chance * 100)}%概率，持续${skill.status.turns}回合。`);
   return parts.join("\n");

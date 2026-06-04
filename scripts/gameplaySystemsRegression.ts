@@ -1,5 +1,6 @@
 import { MAPS } from "../src/data/maps";
 import { PETS, getPetSpecies } from "../src/data/pets";
+import { getSkill } from "../src/data/skills";
 import {
   MAX_ENHANCE_LEVEL,
   MAX_CRIT_RATE,
@@ -20,6 +21,7 @@ import {
   defendUnit,
   enemyAct,
   getActiveUnit,
+  useSkill,
   wildEncounterCandidatesForPosition,
   wildEncounterProfileForPosition
 } from "../src/game/combat";
@@ -155,6 +157,40 @@ const assertStarterAndRewardTuning = (): void => {
   assert(CAPTURE_STONE_DROP_RATE === 0.6, "capture stone drop rate should be 60%");
 };
 
+const basicSkillByElement: Record<ElementType, string> = {
+  fire: "fire-basic",
+  water: "water-basic",
+  forest: "forest-basic",
+  earth: "earth-basic",
+  wind: "wind-basic"
+};
+
+const assertElementSkillKits = (): void => {
+  for (const pet of PETS) {
+    const firstSkill = getSkill(pet.skillIds[0]);
+    assert(pet.skillIds.length <= 3, `${pet.id}: should fit the three battle shortcut slots`);
+    assert(firstSkill.id === basicSkillByElement[pet.element], `${pet.id}: first skill should be the element basic attack`);
+    assert(firstSkill.apCost === 0 && firstSkill.category === "attack" && firstSkill.target === "enemy", `${pet.id}: basic skill should be a 0AP enemy attack`);
+  }
+
+  assert(PETS.some((pet) => pet.element === "fire" && pet.skillIds.some((skillId) => getSkill(skillId).target === "allEnemies" && getSkill(skillId).category === "attack")), "fire kits should include group damage");
+  assert(PETS.some((pet) => pet.element === "water" && pet.skillIds.some((skillId) => getSkill(skillId).category === "heal" && getSkill(skillId).target === "ally")), "water kits should include single target healing");
+  assert(PETS.some((pet) => pet.element === "water" && pet.skillIds.some((skillId) => getSkill(skillId).category === "heal" && getSkill(skillId).target === "allAllies")), "water kits should include group healing");
+  assert(PETS.some((pet) => pet.element === "forest" && pet.skillIds.some((skillId) => getSkill(skillId).category === "heal" && getSkill(skillId).target === "allAllies")), "forest kits should include group healing");
+  assert(PETS.some((pet) => pet.element === "earth" && pet.skillIds.some((skillId) => getSkill(skillId).category === "defense" && getSkill(skillId).target === "allAllies")), "earth kits should include team defense");
+
+  const battle = createWildBattle({
+    ...createInitialState(),
+    party: [createPetInstance("fire-lizard", 3)],
+    position: { ...MAPS[0].camp }
+  });
+  const ally = battle.allies[0];
+  const enemy = battle.enemies[0];
+  const result = useSkill(battle, ally.id, "fire-basic", enemy.id);
+  const nextAlly = result.state.allies.find((unit) => unit.id === ally.id);
+  assert(nextAlly?.ap === ally.ap, "0AP basic attack should not spend AP");
+};
+
 assertCritRange();
 assertElementProfiles();
 assertEnhancementEconomy();
@@ -162,6 +198,7 @@ assertSpeedTurnOrder();
 assertWildEncounterDistanceBands();
 assertEncounterPityCurve();
 assertStarterAndRewardTuning();
+assertElementSkillKits();
 
 console.log(
   JSON.stringify(
@@ -174,7 +211,8 @@ console.log(
         "speedTurnOrder",
         "wildEncounterDistanceBands",
         "encounterPityCurve",
-        "starterAndRewardTuning"
+        "starterAndRewardTuning",
+        "elementSkillKits"
       ]
     },
     null,

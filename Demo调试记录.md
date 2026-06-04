@@ -471,3 +471,34 @@ https://healthcare-actively-platforms-ranger.trycloudflare.com
 - `GITHUB_PAGES=true ./.tools/bin/npm run build` 通过，确认 GitHub Pages 子路径构建正常。
 - `scripts/gameplaySystemsRegression.ts` 回归通过，包含遇敌保底曲线、初始宠物 Lv3、捕获石 60% 掉落配置检查。
 - `scripts/bossDefenseRegression.ts` 回归通过。
+
+## 28. 移动端技能说明与属性技能重构 v2.4
+
+已完成：
+
+- 新增 `SkillInfo` 长按说明组件；手机端长按技能标签/战斗技能按钮可显示完整技能说明，点击说明浮层可关闭，数秒后自动消失。
+- 队伍卡、图鉴详情、战斗技能按钮均接入长按说明；桌面端仍保留 hover/title 说明。
+- 战斗中 AP 不足的灰色技能按钮也能长按查看说明，但点击仍不会释放技能。
+- 每个属性新增 0AP 基础攻击：火苗击、水花击、叶芽击、砾石击、微风击。
+- 所有宠物技能栏重排为最多 3 个技能槽，第一格固定为对应属性 0AP 基础攻击，便于每回合基础攻击并积攒 AP。
+- 火系重调为单体/群体高伤害与灼烧；火山号令调整为敌方全体火焰伤害。
+- 火系群体技能二次降温，降低 Boss 火系三完全体队伍连续群攻造成的不可控爆发。
+- 水系重调为单体治疗、群体治疗、单体守护与群体控速；深海静默改为 1AP 全体强控速，泡沫屏障改为 1AP 单体守护。
+- 森系重调为再生、单体守护、群体治疗与缠绕/破甲。
+- 土系重调为自身石甲、全体石甲、防御辅助与破甲控制。
+- 风系保留速度、先手、轻护盾与终结输出定位。
+- 治疗公式调整为受施放者攻击影响；守护护盾调整为受施放者防御影响。
+- 修复风系全体攻击附带自身加速时可能把疾风错误施加给敌方目标的问题。
+- Boss 完全体属性倍率从 1.25 调整为 1.15，开场 AP 与玩家一致为 1，保留后期压力但避免火山/高地出现推荐阵容近乎无法获胜的问题。
+- `scripts/gameplaySystemsRegression.ts` 新增 `elementSkillKits`，检查每只宠物都有对应属性 0AP 基础攻击、最多 3 个技能槽，并覆盖火群攻、水/森治疗、土全体防御定位。
+
+已检查：
+
+- `./.tools/bin/npm run build` 通过，生成 JS `index-c957ecb2.js`、CSS `index-6b956433.css`。
+- `GITHUB_PAGES=true ./.tools/bin/npm run build` 通过，确认 GitHub Pages 子路径构建正常。
+- `scripts/gameplaySystemsRegression.ts` 回归通过，包含 `elementSkillKits`，确认 50 只宠物均拥有对应属性 0AP 基础攻击，且技能槽不超过 3 个。
+- `scripts/bossDefenseRegression.ts` 回归通过，确认 Boss 战连续防御不会在胜负未成立时误退出。
+- `scripts/elementMatchupRegression.ts` 回归通过，确认优势 120%、劣势 80%、同属性/无相克 100% 的伤害倍率仍作用在基础攻防结算之后。
+- `scripts/bossBalanceSimulation.ts 80 recommended` 完成；推荐属性队在草原/海岸/峡谷保持可胜，火山/高地仍保留较高难度。
+- `scripts/bossBalanceSimulation.ts 3 search` 完成；五张地图均找到可稳定胜利的混合完全体阵容。
+- 本地预览 `http://127.0.0.1:5173/` 可正常返回页面入口。
