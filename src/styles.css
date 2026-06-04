@@ -11,13 +11,23 @@
   box-sizing: border-box;
 }
 
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
 body {
   margin: 0;
   min-width: 320px;
-  min-height: 100vh;
+  min-height: 100dvh;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.36), rgba(255, 255, 255, 0)),
     #e7e1d0;
+  overscroll-behavior: none;
+  touch-action: manipulation;
 }
 
 button {
@@ -42,10 +52,15 @@ button:disabled {
 }
 
 .app-shell {
-  width: min(1440px, 100%);
-  min-height: 100vh;
+  display: grid;
+  width: 100vw;
+  height: 100dvh;
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  gap: 8px;
   margin: 0 auto;
-  padding: 18px;
+  overflow: hidden;
+  padding: clamp(6px, 1vw, 14px);
 }
 
 .topbar {
@@ -53,7 +68,8 @@ button:disabled {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 14px;
+  min-height: 0;
+  margin-bottom: 0;
 }
 
 .brand {
@@ -201,14 +217,22 @@ button:disabled {
 
 .dashboard {
   display: grid;
-  grid-template-columns: minmax(540px, 1fr) minmax(360px, 440px);
-  gap: 16px;
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr) minmax(330px, 420px);
+  gap: 10px;
   align-items: start;
 }
 
 .left-column,
 .right-column {
   min-width: 0;
+}
+
+.left-column {
+  display: grid;
+  min-height: 0;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 8px;
 }
 
 .map-shell,
@@ -222,6 +246,9 @@ button:disabled {
 }
 
 .map-shell {
+  display: grid;
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   overflow: hidden;
   border-width: 2px;
 }
@@ -250,17 +277,34 @@ button:disabled {
   font-size: 13px;
 }
 
-.tile-grid {
+.tile-stage {
+  position: relative;
   display: grid;
-  width: min(100%, 960px);
+  min-height: 0;
+  place-items: center;
+  overflow: hidden;
+  background: #2f3a36;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.tile-grid {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  width: var(--map-logical-width, 1012px);
+  height: var(--map-logical-height, 748px);
   grid-template-columns: repeat(15, 64px);
   grid-auto-rows: 64px;
   justify-content: center;
   gap: 2px;
   margin: 0 auto;
   padding: 12px;
-  overflow: auto;
+  overflow: hidden;
   background: #2f3a36;
+  transform: translate(-50%, -50%) scale(var(--map-scale, 1));
+  transform-origin: center;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
 }
@@ -1052,8 +1096,9 @@ button {
 }
 
 .app-shell {
-  width: min(1360px, 100%);
-  padding: clamp(10px, 2vw, 20px);
+  width: 100vw;
+  height: 100dvh;
+  padding: clamp(6px, 1vw, 14px);
 }
 
 .brand-mark,
@@ -1130,7 +1175,16 @@ button {
 }
 
 .dashboard {
-  grid-template-columns: minmax(520px, 1fr) minmax(350px, 430px);
+  height: 100%;
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr) minmax(330px, 420px);
+}
+
+.right-column {
+  display: grid;
+  min-height: 0;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  overflow: hidden;
 }
 
 .map-header,
@@ -1148,14 +1202,16 @@ button {
 }
 
 .tile-grid {
-  gap: 0;
-  padding: clamp(6px, 1.4vw, 14px);
+  width: var(--map-logical-width, 1012px);
+  height: var(--map-logical-height, 748px);
+  gap: 2px;
+  padding: 12px;
   border-top: 0;
   border-bottom: var(--pixel-border);
   background: #1b2422;
   grid-template-columns: repeat(15, 64px);
   grid-auto-rows: 64px;
-  overflow: auto;
+  overflow: hidden;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
 }
@@ -3024,5 +3080,352 @@ button {
 
   .combatant-nameplate .status-row {
     display: none;
+  }
+}
+
+/* Viewport-fit pass: keeps the 64px logical map complete without page dragging. */
+.app-shell {
+  width: 100vw;
+  height: 100dvh;
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  gap: 8px;
+  overflow: hidden;
+  padding: clamp(6px, 1vw, 14px);
+}
+
+.dashboard {
+  height: 100%;
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr) minmax(330px, 420px);
+  gap: 10px;
+  align-items: stretch;
+}
+
+.left-column {
+  display: grid;
+  min-height: 0;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.map-shell {
+  display: grid;
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.tile-stage {
+  position: relative;
+  display: grid;
+  min-height: 0;
+  place-items: center;
+  overflow: hidden;
+  background: #1b2422;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.tile-grid {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--map-logical-width, 1012px);
+  height: var(--map-logical-height, 748px);
+  flex: 0 0 auto;
+  gap: 2px;
+  padding: 12px;
+  overflow: hidden;
+  transform: translate(-50%, -50%) scale(var(--map-scale, 1));
+  transform-origin: center;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.right-column {
+  display: grid;
+  min-height: 0;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  overflow: hidden;
+  padding: clamp(8px, 1vw, 12px);
+}
+
+.panel-body {
+  min-height: 0;
+  max-height: none;
+  overflow: auto;
+}
+
+.quest-strip {
+  min-height: 0;
+  margin-top: 0;
+  padding: 7px 10px;
+}
+
+.log-panel {
+  max-height: clamp(56px, 10dvh, 118px);
+  margin-top: 0;
+  overflow: auto;
+  padding: 7px 10px;
+}
+
+@media (max-width: 1180px) {
+  .dashboard {
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+  }
+
+  .resource-panel {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .panel-tabs button {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 900px) {
+  .app-shell {
+    gap: 6px;
+    padding: 6px;
+  }
+
+  .topbar,
+  .map-header {
+    align-items: center;
+    flex-direction: row;
+  }
+
+  .brand {
+    gap: 8px;
+  }
+
+  .brand-mark {
+    width: 36px;
+    height: 36px;
+    box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.34);
+  }
+
+  .brand h1 {
+    font-size: 18px;
+  }
+
+  .brand span:last-child,
+  .map-subtitle {
+    display: none;
+  }
+
+  .top-actions {
+    width: auto;
+    justify-content: flex-end;
+  }
+
+  .language-button {
+    min-height: 34px;
+    padding: 6px 8px;
+  }
+
+  .square-button {
+    width: 34px;
+    height: 34px;
+  }
+
+  .dashboard {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr) minmax(138px, 28dvh);
+    gap: 6px;
+  }
+
+  .right-column {
+    order: 2;
+    padding: 6px;
+  }
+
+  .resource-panel {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 4px;
+    margin-bottom: 5px;
+  }
+
+  .resource-panel div {
+    min-height: 34px;
+    padding: 4px;
+  }
+
+  .resource-panel span {
+    font-size: 10px;
+  }
+
+  .resource-panel strong {
+    font-size: 14px;
+  }
+
+  .panel-tabs {
+    position: static;
+    gap: 4px;
+    padding-bottom: 4px;
+  }
+
+  .panel-tabs button {
+    min-height: 34px;
+    padding: 4px;
+    font-size: 11px;
+  }
+
+  .map-header {
+    gap: 6px;
+    padding: 6px 8px;
+  }
+
+  .map-header h2 {
+    font-size: 17px;
+  }
+
+  .coord-pill {
+    padding: 4px 6px;
+    font-size: 11px;
+  }
+
+  .map-actions {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 5px;
+    padding: 6px;
+  }
+
+  .map-actions .icon-button {
+    min-height: 34px;
+    padding: 5px 4px;
+    font-size: 11px;
+    white-space: normal;
+  }
+
+  .dpad {
+    grid-template-columns: repeat(3, 46px);
+    gap: 5px;
+    margin-top: 0;
+  }
+
+  .dpad button {
+    width: 46px;
+    height: 40px;
+    min-height: 0;
+  }
+
+  .quest-strip {
+    display: none;
+  }
+
+  .log-panel {
+    max-height: 52px;
+  }
+}
+
+@media (max-width: 520px) {
+  .app-shell {
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+
+  .dashboard {
+    grid-template-rows: minmax(0, 1fr) minmax(126px, 24dvh);
+  }
+
+  .topbar {
+    gap: 6px;
+  }
+
+  .brand-mark {
+    display: none;
+  }
+
+  .language-button span {
+    display: none;
+  }
+
+  .map-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .map-actions .icon-button {
+    min-height: 32px;
+    font-size: 10px;
+  }
+
+  .resource-panel {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .resource-panel div {
+    gap: 0;
+    min-height: 30px;
+  }
+
+  .resource-panel span {
+    font-size: 9px;
+  }
+
+  .resource-panel strong {
+    font-size: 12px;
+  }
+
+  .panel-tabs button {
+    min-height: 32px;
+    font-size: 0;
+  }
+
+  .panel-tabs .pixel-icon {
+    margin: 0;
+  }
+
+  .panel-body {
+    font-size: 11px;
+  }
+
+  .pet-card.compact {
+    padding: 5px;
+  }
+
+  .log-panel {
+    display: none;
+  }
+}
+
+@media (max-height: 560px) and (orientation: landscape) {
+  .app-shell {
+    grid-template-rows: minmax(0, 1fr);
+    padding: 5px;
+  }
+
+  .topbar,
+  .quest-strip,
+  .log-panel {
+    display: none;
+  }
+
+  .dashboard {
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 32vw);
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .map-header {
+    padding: 5px 8px;
+  }
+
+  .map-actions {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    padding: 5px;
+  }
+
+  .dpad {
+    grid-template-columns: repeat(3, 42px);
+    gap: 4px;
+  }
+
+  .dpad button {
+    width: 42px;
+    height: 34px;
+  }
+
+  .right-column {
+    padding: 5px;
   }
 }

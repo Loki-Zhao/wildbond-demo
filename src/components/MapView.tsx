@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { ELEMENT_COLORS } from "../game/balance";
 import { distance, getTerrainAt } from "../game/mapLogic";
 import type { MapDefinition } from "../game/types";
@@ -22,6 +22,43 @@ interface MapViewProps {
 
 const viewWidth = 15;
 const viewHeight = 11;
+const tileSize = 64;
+const tileGap = 2;
+const tilePadding = 12;
+const logicalMapWidth = viewWidth * tileSize + (viewWidth - 1) * tileGap + tilePadding * 2;
+const logicalMapHeight = viewHeight * tileSize + (viewHeight - 1) * tileGap + tilePadding * 2;
+
+const getContainScale = (node: HTMLElement | null): number => {
+  if (!node) return 1;
+  const rect = node.getBoundingClientRect();
+  const fitScale = Math.min(rect.width / logicalMapWidth, rect.height / logicalMapHeight);
+  if (!Number.isFinite(fitScale) || fitScale <= 0) return 1;
+  if (fitScale >= 1) return 1;
+  return Math.max(0.12, fitScale);
+};
+
+const useMapContainScale = () => {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    const updateScale = () => setScale(getContainScale(ref.current));
+    updateScale();
+
+    const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(updateScale) : null;
+    if (ref.current && observer) observer.observe(ref.current);
+    window.addEventListener("resize", updateScale);
+    window.addEventListener("orientationchange", updateScale);
+
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", updateScale);
+      window.removeEventListener("orientationchange", updateScale);
+    };
+  }, []);
+
+  return { ref, scale };
+};
 
 const detailVariant = (x: number, y: number, mapId: string): number => {
   const seed = mapId.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0);
@@ -29,6 +66,7 @@ const detailVariant = (x: number, y: number, mapId: string): number => {
 };
 
 export function MapView({ map, position, defeated, bossChallengeLevel, maxBossChallengeLevel, language, onHeal, onReturnHome, onGuide, onBoss }: MapViewProps) {
+  const { ref: tileStageRef, scale: tileScale } = useMapContainScale();
   const startX = position.x - Math.floor(viewWidth / 2);
   const startY = position.y - Math.floor(viewHeight / 2);
   const tiles = [];
@@ -117,7 +155,19 @@ export function MapView({ map, position, defeated, bossChallengeLevel, maxBossCh
         </div>
       </div>
 
-      <div className="tile-grid">{tiles}</div>
+      <div
+        className="tile-stage"
+        ref={tileStageRef}
+        style={
+          {
+            "--map-logical-width": `${logicalMapWidth}px`,
+            "--map-logical-height": `${logicalMapHeight}px`,
+            "--map-scale": tileScale
+          } as CSSProperties
+        }
+      >
+        <div className="tile-grid">{tiles}</div>
+      </div>
 
       <div className="map-actions">
         <button className="icon-button" onClick={onReturnHome} title={t(language, "returnHome")}>

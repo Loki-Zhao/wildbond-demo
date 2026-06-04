@@ -607,3 +607,40 @@ https://healthcare-actively-platforms-ranger.trycloudflare.com
 - `scripts/bossDefenseRegression.ts` 回归通过。
 - `scripts/elementMatchupRegression.ts` 回归通过。
 - 本地预览 `http://127.0.0.1:5173/` 可正常返回页面入口。
+
+## 33. PC / 手机视口自适应与 64px 像素保持 v2.9
+
+已定位问题：
+
+- `index.html` 旧 viewport 未禁止移动端浏览器缩放，手机端可能被浏览器手势缩放和页面滚动影响布局。
+- `.tile-grid` 固定为 15x11 个 64px 瓦片后，逻辑地图尺寸为 `1012x748`，直接参与普通 DOM 布局时会撑大地图壳。
+- 手机端旧规则通过 `overflow-x: auto` 让地图横向拖动查看，违背“地图与 UI 完整显示在视口内”的要求。
+- `.dashboard` 旧规则 `align-items: start` 会让左侧地图区域按内容高度而非可用高度布局，方向键容易被挤出可视区。
+
+已完成：
+
+- `index.html` viewport 更新为 `width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no`。
+- `MapView` 新增地图 contain 缩放逻辑：监听 `ResizeObserver`、`resize`、`orientationchange`，按 `min(舞台宽 / 1012, 舞台高 / 748)` 动态计算显示倍率。
+- 地图逻辑层仍保持 15x11 个原生 64x64 瓦片，逻辑分辨率固定为 `1012x748`。
+- `.tile-grid` 改为绝对定位在 `.tile-stage` 中心，通过 `transform: translate(-50%, -50%) scale(var(--map-scale))` 做显示层缩放，不再用未缩放高度撑开布局。
+- 页面外层改为 `100dvh` 游戏框，`body/html/#root` 禁止页面滚动；多余空间由背景填充。
+- PC / 平板 / 手机横竖屏增加最终响应式覆盖规则，地图、方向键、右侧资源与标签区域均保持在视口内。
+- 64px 像素资源链路自检更新：允许唯一的 viewport-fit 地图缩放变量，继续禁止其它非镜像 `scale(...)`。
+
+缩放说明：
+
+- 地图逻辑分辨率：`1012x748`，来自 `15 * 64 + 14 * 2 + 12 * 2` 宽、`11 * 64 + 10 * 2 + 12 * 2` 高。
+- 当前最大显示倍率为 `1x`，足够空间时保持 1 个源像素对应 1 个显示像素。
+- 当视口或地图舞台不足时，使用 contain 小数倍率缩小整张逻辑地图；源瓦片仍是 64x64，CSS 仍使用 `image-rendering: pixelated` / `crisp-edges`。
+
+已检查：
+
+- `./.tools/bin/npm run build` 通过，生成 JS `index-07736923.js`、CSS `index-aef9c0d4.css`。
+- `GITHUB_PAGES=true ./.tools/bin/npm run build` 通过，生成 JS `index-07736923.js`、CSS `index-aef9c0d4.css`。
+- `./.tools/bin/node scripts/pixelAssetAudit.mjs` 通过，确认 64x64 源、无旧 upscale、地图 64px、仅允许地图 viewport-fit 缩放。
+- `./.tools/bin/node scripts/responsiveViewportQa.mjs http://127.0.0.1:5173/` 通过，检查视口：`1920x1080`、`1366x768`、`390x844` 手机竖屏、`844x390` 手机横屏。
+- 四组视口均确认：`body` 无横向/纵向滚动，地图舞台、地图显示层、方向键、右侧栏、初始宠物选择弹窗均在视口内。
+- `scripts/gameplaySystemsRegression.ts` 回归通过，确认玩法系统未受布局改动影响。
+- `scripts/fusionValidation.ts` 验证通过。
+- `scripts/bossDefenseRegression.ts` 回归通过。
+- `scripts/elementMatchupRegression.ts` 回归通过。

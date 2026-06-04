@@ -16,6 +16,7 @@ const files = {
 };
 
 const sourceText = Object.values(files).join("\n");
+const stylesWithoutAllowedViewportScale = files.styles.replace(/scale\(var\(--map-scale,\s*1\)\)/g, "");
 const checks = [
   ["pet/player sprite raster target is 64", /const SPRITE_SIZE = 64;/.test(files.pixelSprite)],
   ["pet/player sprite no 24px source buffer", !/BASE_SPRITE_SIZE|upscalePetGrid|upscaleSymbolGrid/.test(files.pixelSprite)],
@@ -24,7 +25,7 @@ const checks = [
   ["css canvas nearest-neighbor rendering", /canvas,\n\.pixel-icon[\s\S]*image-rendering: pixelated;[\s\S]*image-rendering: crisp-edges;/.test(files.styles)],
   ["map tiles are fixed 64px", /grid-template-columns: repeat\(15, 64px\);/.test(files.styles) && /grid-auto-rows: 64px;/.test(files.styles) && /width: 64px;/.test(files.styles) && /height: 64px;/.test(files.styles)],
   ["sprite display units are integer only", !/--p:\s*\d+\.\d+px/.test(files.styles)],
-  ["no non-mirror scale transforms", !/\bscale\((?!X)/.test(files.styles)],
+  ["only viewport-fit map scale transforms", /--map-scale/.test(files.map) && !/\bscale\((?!X)/.test(stylesWithoutAllowedViewportScale)],
   ["no lucide svg icons remain", !/lucide-react/.test(sourceText)]
 ];
 
