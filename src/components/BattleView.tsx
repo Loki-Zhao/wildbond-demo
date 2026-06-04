@@ -1,4 +1,3 @@
-import { CircleDot, Heart, Shield, Sparkles, Swords, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { getPetSpecies } from "../data/pets";
 import { getSkill } from "../data/skills";
@@ -6,6 +5,7 @@ import { ELEMENT_COLORS, getBattleUnitStats } from "../game/balance";
 import { captureChance, getActiveUnit } from "../game/combat";
 import type { BattleState, BattleUnit, ElementType, Skill, SkillCategory } from "../game/types";
 import { elementLabel, petName, skillName, skillTooltip, statusLabel, t, translateLog, type Language } from "../i18n";
+import { PixelIcon } from "./PixelIcon";
 import { PixelPetSprite } from "./PixelSprite";
 import { ShortcutHint } from "./ShortcutHint";
 import { SkillEffect } from "./SkillEffect";
@@ -313,7 +313,7 @@ export function BattleView({
             <small>{activeUnit?.side === "enemy" ? t(language, "enemyActing") : t(language, "chooseAction")}</small>
           </div>
           <button className="square-button" onClick={onRun} disabled={battle.isBoss} title={t(language, "runTitle")}>
-            <X size={18} />
+            <PixelIcon name="x" size={18} />
           </button>
         </div>
 
@@ -385,7 +385,15 @@ export function BattleView({
                   {...bindSkillInfo(tooltip)}
                 >
                   <ShortcutHint value={shortcut} />
-                  {skill.category === "attack" ? <Swords size={17} /> : skill.category === "heal" ? <Heart size={17} /> : skill.category === "defense" ? <Shield size={17} /> : <Sparkles size={17} />}
+                  {skill.category === "attack" ? (
+                    <PixelIcon name="swords" size={17} />
+                  ) : skill.category === "heal" ? (
+                    <PixelIcon name="heart" size={17} />
+                  ) : skill.category === "defense" ? (
+                    <PixelIcon name="shield" size={17} />
+                  ) : (
+                    <PixelIcon name="sparkles" size={17} />
+                  )}
                   <span>{skillName(language, skill.id, skill.name)}</span>
                   <small>{skill.apCost} AP</small>
                 </button>
@@ -393,7 +401,7 @@ export function BattleView({
             })}
             <button className="skill-button defense-action" disabled={!canPlayerAct} onClick={defendActiveAlly} title={t(language, "defenseTitle")}>
               <ShortcutHint value="4" />
-              <Shield size={17} />
+              <PixelIcon name="shield" size={17} />
               <span>{t(language, "defense")}</span>
               <small>{t(language, "damageOneThird")}</small>
             </button>
@@ -404,7 +412,7 @@ export function BattleView({
               <strong>{t(language, "defeatTitle")}</strong>
               <span>{t(language, "defeatDetail")}</span>
               <button className="icon-button danger" type="button" onClick={onConfirmDefeat}>
-                <X size={17} />
+                <PixelIcon name="x" size={17} />
                 {t(language, "returnCamp")}
               </button>
             </div>
@@ -416,7 +424,7 @@ export function BattleView({
                 <strong>{skillName(language, pendingSkill.skill.id, pendingSkill.skill.name)}</strong>
                 <span>{pendingSkill.targetSide === "enemy" ? t(language, "chooseEnemyTarget") : t(language, "chooseAllyTarget")}</span>
                 <button className="subpanel-close" onClick={() => setPendingSkill(null)} type="button">
-                  <X size={15} />
+                  <PixelIcon name="x" size={15} />
                 </button>
               </div>
               <div className="target-subbuttons">
@@ -462,13 +470,13 @@ export function BattleView({
                   onCapture(enemy.id);
                 }}
               >
-                <CircleDot size={17} />
+                <PixelIcon name="circle" size={17} />
                 {t(language, "capture")}{unitName(enemy, language)}
                 <small>{Math.round(captureChance(enemy) * 100)}%</small>
               </button>
             ))}
             <button className="icon-button escape-button" onClick={onRun} disabled={resolved || busy || battle.isBoss}>
-              <X size={17} />
+              <PixelIcon name="x" size={17} />
               {t(language, "run")}
             </button>
           </div>

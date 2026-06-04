@@ -3,7 +3,7 @@ import { PET_SPRITE_DESIGNS, type PetSpriteDesign, type SpriteBase, type SpriteF
 import { ELEMENT_COLORS } from "../game/balance";
 import type { ElementType, GrowthLevel } from "../game/types";
 
-const BASE_SPRITE_SIZE = 24;
+const DESIGN_COORD_SIZE = 24;
 const SPRITE_SIZE = 64;
 
 type PixelKey = "empty" | "outline" | "body" | "light" | "accent" | "dark" | "eye" | "beak" | "white" | "shadow";
@@ -40,33 +40,30 @@ const fallbackDesign: PetSpriteDesign = {
   bulk: "normal"
 };
 
-const makeGrid = (width = BASE_SPRITE_SIZE, height = BASE_SPRITE_SIZE): PixelGrid =>
+const makeGrid = (width = SPRITE_SIZE, height = SPRITE_SIZE): PixelGrid =>
   Array.from({ length: height }, () => Array.from({ length: width }, () => "empty" as PixelKey));
 
 const hashString = (value: string): number =>
   value.split("").reduce((total, char, index) => total + char.charCodeAt(0) * (index + 5), 23);
 
-const setPixel = (grid: PixelGrid, x: number, y: number, key: PixelKey) => {
+const nativeCoord = (value: number): number => Math.round((value / DESIGN_COORD_SIZE) * SPRITE_SIZE);
+const nativeSpan = (value: number): number => Math.max(1, Math.round((value / DESIGN_COORD_SIZE) * SPRITE_SIZE));
+
+const setNativePixel = (grid: PixelGrid, x: number, y: number, key: PixelKey) => {
   if (x >= 0 && y >= 0 && y < grid.length && x < grid[y].length) {
     grid[y][x] = key;
   }
 };
 
-const paintBody = (grid: PixelGrid, x: number, y: number, key: PixelKey) => {
-  if (grid[y]?.[x] === "body" || grid[y]?.[x] === "light" || grid[y]?.[x] === "dark") {
-    setPixel(grid, x, y, key);
-  }
-};
-
-const drawRect = (grid: PixelGrid, x: number, y: number, width: number, height: number, key: PixelKey) => {
+const drawNativeRect = (grid: PixelGrid, x: number, y: number, width: number, height: number, key: PixelKey) => {
   for (let yy = y; yy < y + height; yy += 1) {
     for (let xx = x; xx < x + width; xx += 1) {
-      setPixel(grid, xx, yy, key);
+      setNativePixel(grid, xx, yy, key);
     }
   }
 };
 
-const drawLine = (grid: PixelGrid, x0: number, y0: number, x1: number, y1: number, key: PixelKey, thickness = 1) => {
+const drawNativeLine = (grid: PixelGrid, x0: number, y0: number, x1: number, y1: number, key: PixelKey, thickness = 1) => {
   let currentX = x0;
   let currentY = y0;
   const dx = Math.abs(x1 - x0);
@@ -76,7 +73,7 @@ const drawLine = (grid: PixelGrid, x0: number, y0: number, x1: number, y1: numbe
   let err = dx + dy;
 
   while (true) {
-    drawRect(grid, currentX - Math.floor(thickness / 2), currentY - Math.floor(thickness / 2), thickness, thickness, key);
+    drawNativeRect(grid, currentX - Math.floor(thickness / 2), currentY - Math.floor(thickness / 2), thickness, thickness, key);
     if (currentX === x1 && currentY === y1) break;
     const e2 = 2 * err;
     if (e2 >= dy) {
@@ -90,17 +87,77 @@ const drawLine = (grid: PixelGrid, x0: number, y0: number, x1: number, y1: numbe
   }
 };
 
-const drawEllipse = (grid: PixelGrid, cx: number, cy: number, rx: number, ry: number, fill: PixelKey = "body") => {
+const drawNativeEllipse = (grid: PixelGrid, cx: number, cy: number, rx: number, ry: number, fill: PixelKey = "body") => {
   for (let y = Math.floor(cy - ry - 1); y <= Math.ceil(cy + ry + 1); y += 1) {
     for (let x = Math.floor(cx - rx - 1); x <= Math.ceil(cx + rx + 1); x += 1) {
       const value = ((x - cx) * (x - cx)) / (rx * rx) + ((y - cy) * (y - cy)) / (ry * ry);
       if (value <= 1) {
-        setPixel(grid, x, y, value > 0.68 ? "outline" : fill);
+        setNativePixel(grid, x, y, value > 0.68 ? "outline" : fill);
       }
     }
   }
-  setPixel(grid, Math.round(cx - rx / 2), Math.round(cy - ry / 2), "light");
-  setPixel(grid, Math.round(cx + rx / 2), Math.round(cy + ry / 2), "dark");
+  setNativePixel(grid, Math.round(cx - rx / 2), Math.round(cy - ry / 2), "light");
+  setNativePixel(grid, Math.round(cx + rx / 2), Math.round(cy + ry / 2), "dark");
+};
+
+const setPixel = (grid: PixelGrid, x: number, y: number, key: PixelKey) => {
+  setNativePixel(grid, nativeCoord(x), nativeCoord(y), key);
+};
+
+const paintBody = (grid: PixelGrid, x: number, y: number, key: PixelKey) => {
+  const nativeX = nativeCoord(x);
+  const nativeY = nativeCoord(y);
+  if (grid[nativeY]?.[nativeX] === "body" || grid[nativeY]?.[nativeX] === "light" || grid[nativeY]?.[nativeX] === "dark") {
+    setNativePixel(grid, nativeX, nativeY, key);
+  }
+};
+
+const drawRect = (grid: PixelGrid, x: number, y: number, width: number, height: number, key: PixelKey) => {
+  drawNativeRect(grid, nativeCoord(x), nativeCoord(y), nativeSpan(width), nativeSpan(height), key);
+};
+
+const drawLine = (grid: PixelGrid, x0: number, y0: number, x1: number, y1: number, key: PixelKey, thickness = 1) => {
+  let currentX = nativeCoord(x0);
+  let currentY = nativeCoord(y0);
+  const targetX = nativeCoord(x1);
+  const targetY = nativeCoord(y1);
+  const nativeThickness = nativeSpan(thickness);
+  const dx = Math.abs(targetX - currentX);
+  const sx = currentX < targetX ? 1 : -1;
+  const dy = -Math.abs(targetY - currentY);
+  const sy = currentY < targetY ? 1 : -1;
+  let err = dx + dy;
+
+  while (true) {
+    drawNativeRect(grid, currentX - Math.floor(nativeThickness / 2), currentY - Math.floor(nativeThickness / 2), nativeThickness, nativeThickness, key);
+    if (currentX === targetX && currentY === targetY) break;
+    const e2 = 2 * err;
+    if (e2 >= dy) {
+      err += dy;
+      currentX += sx;
+    }
+    if (e2 <= dx) {
+      err += dx;
+      currentY += sy;
+    }
+  }
+};
+
+const drawEllipse = (grid: PixelGrid, cx: number, cy: number, rx: number, ry: number, fill: PixelKey = "body") => {
+  const nativeCx = nativeCoord(cx);
+  const nativeCy = nativeCoord(cy);
+  const nativeRx = nativeSpan(rx);
+  const nativeRy = nativeSpan(ry);
+  for (let y = Math.floor(nativeCy - nativeRy - 1); y <= Math.ceil(nativeCy + nativeRy + 1); y += 1) {
+    for (let x = Math.floor(nativeCx - nativeRx - 1); x <= Math.ceil(nativeCx + nativeRx + 1); x += 1) {
+      const value = ((x - nativeCx) * (x - nativeCx)) / (nativeRx * nativeRx) + ((y - nativeCy) * (y - nativeCy)) / (nativeRy * nativeRy);
+      if (value <= 1) {
+        setNativePixel(grid, x, y, value > 0.68 ? "outline" : fill);
+      }
+    }
+  }
+  setNativePixel(grid, Math.round(nativeCx - nativeRx / 2), Math.round(nativeCy - nativeRy / 2), "light");
+  setNativePixel(grid, Math.round(nativeCx + nativeRx / 2), Math.round(nativeCy + nativeRy / 2), "dark");
 };
 
 const drawPointedEar = (grid: PixelGrid, x: number, y: number, flip = false) => {
@@ -876,80 +933,49 @@ const drawElementMotif = (grid: PixelGrid, element: ElementType, growthLevel: Gr
   }
 };
 
-const scaleFrom48 = (value: number): number => Math.round((value / 48) * SPRITE_SIZE);
+const nativeFrom48 = (value: number): number => Math.round((value / 48) * SPRITE_SIZE);
 const spanFrom48 = (value: number): number => Math.max(1, Math.round((value / 48) * SPRITE_SIZE));
 
-const upscalePetGrid = (grid: PixelGrid, speciesId: string, element: ElementType, growthLevel: GrowthLevel): PixelGrid => {
-  const output = makeGrid(SPRITE_SIZE, SPRITE_SIZE);
+const decorateNativePetGrid = (grid: PixelGrid, speciesId: string, element: ElementType, growthLevel: GrowthLevel): PixelGrid => {
   const hash = hashString(speciesId);
-  const sourceHeight = grid.length;
-  const sourceWidth = grid[0]?.length ?? BASE_SPRITE_SIZE;
 
   grid.forEach((row, y) => {
     row.forEach((cell, x) => {
-      const sx = Math.floor((x * SPRITE_SIZE) / sourceWidth);
-      const sy = Math.floor((y * SPRITE_SIZE) / sourceHeight);
-      const nextX = Math.floor(((x + 1) * SPRITE_SIZE) / sourceWidth);
-      const nextY = Math.floor(((y + 1) * SPRITE_SIZE) / sourceHeight);
-      const width = Math.max(1, nextX - sx);
-      const height = Math.max(1, nextY - sy);
-      drawRect(output, sx, sy, width, height, cell);
-
       if (cell === "body") {
-        if ((x * 5 + y * 3 + hash) % 6 === 0) setPixel(output, sx, sy, "light");
-        if ((x * 7 + y * 2 + hash) % 9 === 0) setPixel(output, Math.max(sx, nextX - 1), Math.max(sy, nextY - 1), "dark");
+        if ((x * 5 + y * 3 + hash) % 47 === 0) setNativePixel(grid, x, y, "light");
+        if ((x * 7 + y * 2 + hash) % 67 === 0) setNativePixel(grid, x, y, "dark");
       }
-      if (cell === "accent" && (x + y + hash) % 4 === 0) {
-        setPixel(output, sx, sy, "light");
+      if (cell === "accent" && (x + y + hash) % 41 === 0) {
+        setNativePixel(grid, x, y, "light");
       }
-      if (cell === "white" && (x * 3 + y + hash) % 5 === 0) {
-        setPixel(output, Math.max(sx, nextX - 1), sy, "accent");
+      if (cell === "white" && (x * 3 + y + hash) % 53 === 0) {
+        setNativePixel(grid, x, y, "accent");
       }
     });
   });
 
   if (element === "fire") {
-    drawRect(output, scaleFrom48(8), scaleFrom48(5), spanFrom48(2), spanFrom48(2), "light");
-    if (growthLevel === 3) drawLine(output, scaleFrom48(11), scaleFrom48(4), scaleFrom48(14), scaleFrom48(1), "accent", spanFrom48(2));
+    drawNativeRect(grid, nativeFrom48(8), nativeFrom48(5), spanFrom48(2), spanFrom48(2), "light");
+    if (growthLevel === 3) drawNativeLine(grid, nativeFrom48(11), nativeFrom48(4), nativeFrom48(14), nativeFrom48(1), "accent", spanFrom48(2));
   }
   if (element === "water") {
-    drawEllipse(output, scaleFrom48(6), scaleFrom48(8), spanFrom48(2), spanFrom48(2), "white");
-    if (growthLevel >= 2) drawEllipse(output, scaleFrom48(42), scaleFrom48(35), spanFrom48(2), spanFrom48(2), "accent");
+    drawNativeEllipse(grid, nativeFrom48(6), nativeFrom48(8), spanFrom48(2), spanFrom48(2), "white");
+    if (growthLevel >= 2) drawNativeEllipse(grid, nativeFrom48(42), nativeFrom48(35), spanFrom48(2), spanFrom48(2), "accent");
   }
   if (element === "forest") {
-    drawLine(output, scaleFrom48(7), scaleFrom48(8), scaleFrom48(11), scaleFrom48(6), "light", spanFrom48(2));
-    if (growthLevel === 3) drawRect(output, scaleFrom48(39), scaleFrom48(12), spanFrom48(3), spanFrom48(2), "accent");
+    drawNativeLine(grid, nativeFrom48(7), nativeFrom48(8), nativeFrom48(11), nativeFrom48(6), "light", spanFrom48(2));
+    if (growthLevel === 3) drawNativeRect(grid, nativeFrom48(39), nativeFrom48(12), spanFrom48(3), spanFrom48(2), "accent");
   }
   if (element === "earth") {
-    drawRect(output, scaleFrom48(5), scaleFrom48(41), spanFrom48(4), spanFrom48(3), "dark");
-    if (growthLevel >= 2) drawRect(output, scaleFrom48(38), scaleFrom48(40), spanFrom48(4), spanFrom48(3), "accent");
+    drawNativeRect(grid, nativeFrom48(5), nativeFrom48(41), spanFrom48(4), spanFrom48(3), "dark");
+    if (growthLevel >= 2) drawNativeRect(grid, nativeFrom48(38), nativeFrom48(40), spanFrom48(4), spanFrom48(3), "accent");
   }
   if (element === "wind") {
-    drawLine(output, scaleFrom48(4), scaleFrom48(11), scaleFrom48(12), scaleFrom48(9), "white");
-    if (growthLevel === 3) drawLine(output, scaleFrom48(35), scaleFrom48(8), scaleFrom48(45), scaleFrom48(10), "accent");
+    drawNativeLine(grid, nativeFrom48(4), nativeFrom48(11), nativeFrom48(12), nativeFrom48(9), "white");
+    if (growthLevel === 3) drawNativeLine(grid, nativeFrom48(35), nativeFrom48(8), nativeFrom48(45), nativeFrom48(10), "accent");
   }
 
-  return output;
-};
-
-const upscaleSymbolGrid = (grid: string[][]): string[][] => {
-  const output = Array.from({ length: SPRITE_SIZE }, () => Array.from({ length: SPRITE_SIZE }, () => "."));
-  const sourceHeight = grid.length;
-  const sourceWidth = grid[0]?.length ?? BASE_SPRITE_SIZE;
-  grid.forEach((row, y) => {
-    row.forEach((cell, x) => {
-      const sx = Math.floor((x * SPRITE_SIZE) / sourceWidth);
-      const sy = Math.floor((y * SPRITE_SIZE) / sourceHeight);
-      const nextX = Math.floor(((x + 1) * SPRITE_SIZE) / sourceWidth);
-      const nextY = Math.floor(((y + 1) * SPRITE_SIZE) / sourceHeight);
-      for (let yy = sy; yy < Math.max(sy + 1, nextY); yy += 1) {
-        for (let xx = sx; xx < Math.max(sx + 1, nextX); xx += 1) {
-          if (yy < SPRITE_SIZE && xx < SPRITE_SIZE) output[yy][xx] = cell;
-        }
-      }
-    });
-  });
-  return output;
+  return grid;
 };
 
 const drawPetPixels = (speciesId: string, element: ElementType, growthLevel: GrowthLevel): PixelGrid => {
@@ -966,7 +992,7 @@ const drawPetPixels = (speciesId: string, element: ElementType, growthLevel: Gro
     drawRect(grid, 7, 22, 10, 1, "shadow");
   }
 
-  return upscalePetGrid(grid, speciesId, element, growthLevel);
+  return decorateNativePetGrid(grid, speciesId, element, growthLevel);
 };
 
 interface PixelPetSpriteProps {
@@ -1012,34 +1038,60 @@ export function PixelPetSprite({ speciesId, element, growthLevel, size = "medium
   );
 }
 
+type SymbolGrid = string[][];
+
+const makeSymbolGrid = (): SymbolGrid => Array.from({ length: SPRITE_SIZE }, () => Array.from({ length: SPRITE_SIZE }, () => "."));
+
+const setSymbolPixel = (grid: SymbolGrid, x: number, y: number, key: string) => {
+  if (x >= 0 && y >= 0 && y < grid.length && x < grid[y].length) {
+    grid[y][x] = key;
+  }
+};
+
+const drawSymbolRect = (grid: SymbolGrid, x: number, y: number, width: number, height: number, key: string) => {
+  for (let yy = y; yy < y + height; yy += 1) {
+    for (let xx = x; xx < x + width; xx += 1) {
+      setSymbolPixel(grid, xx, yy, key);
+    }
+  }
+};
+
+const drawPlayerPixels = (): SymbolGrid => {
+  const grid = makeSymbolGrid();
+
+  drawSymbolRect(grid, 20, 55, 24, 4, "s");
+  drawSymbolRect(grid, 23, 58, 18, 2, "s");
+
+  drawSymbolRect(grid, 23, 5, 18, 7, "h");
+  drawSymbolRect(grid, 19, 11, 26, 7, "h");
+  drawSymbolRect(grid, 17, 18, 30, 5, "h");
+  drawSymbolRect(grid, 20, 17, 24, 13, "f");
+  drawSymbolRect(grid, 18, 23, 4, 9, "f");
+  drawSymbolRect(grid, 42, 23, 4, 9, "f");
+  drawSymbolRect(grid, 25, 28, 14, 4, "f");
+  drawSymbolRect(grid, 23, 20, 3, 3, "h");
+  drawSymbolRect(grid, 38, 20, 3, 3, "h");
+  drawSymbolRect(grid, 25, 21, 3, 3, "d");
+  drawSymbolRect(grid, 38, 21, 3, 3, "d");
+  drawSymbolRect(grid, 31, 27, 5, 2, "h");
+
+  drawSymbolRect(grid, 20, 33, 24, 6, "b");
+  drawSymbolRect(grid, 17, 39, 30, 7, "b");
+  drawSymbolRect(grid, 21, 38, 22, 15, "g");
+  drawSymbolRect(grid, 28, 39, 8, 13, "y");
+  drawSymbolRect(grid, 42, 34, 5, 7, "r");
+  drawSymbolRect(grid, 14, 40, 7, 11, "b");
+  drawSymbolRect(grid, 43, 40, 7, 11, "b");
+  drawSymbolRect(grid, 24, 52, 7, 8, "b");
+  drawSymbolRect(grid, 34, 52, 7, 8, "b");
+  drawSymbolRect(grid, 22, 59, 10, 3, "d");
+  drawSymbolRect(grid, 33, 59, 10, 3, "d");
+
+  return grid;
+};
+
 export function PixelPlayerSprite({ size = "medium" }: { size?: "small" | "medium" | "large" }) {
-  const baseGrid = [
-    "........................",
-    ".........hhhhh..........",
-    "........hhhhhhh.........",
-    ".......hhffhffh.........",
-    ".......hfffffh..........",
-    "........hffffh..........",
-    ".......bbbbbrb..........",
-    "......bbbbbbbbbb........",
-    "......bbggyggbb.........",
-    ".....bbbggggbbbb........",
-    ".....bbggggggbb.........",
-    "......gggggggg..........",
-    "......ggg..ggg..........",
-    "......bbb..bbb..........",
-    ".....bbbb..bbbb.........",
-    ".....ddd....ddd.........",
-    "....dddd....dddd........",
-    "....dd........dd........",
-    "........................",
-    "........ssssss..........",
-    ".......ssssssss.........",
-    "........................",
-    "........................",
-    "........................"
-  ];
-  const grid = upscaleSymbolGrid(baseGrid.map((row) => row.split("")));
+  const grid = drawPlayerPixels();
   const colors: Record<string, string> = {
     ".": "transparent",
     h: "#392a22",

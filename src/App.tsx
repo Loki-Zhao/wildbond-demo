@@ -1,25 +1,9 @@
-import {
-  Archive,
-  BookOpen,
-  ChevronUp,
-  Footprints,
-  Gem,
-  HeartPulse,
-  Languages,
-  Map,
-  PawPrint,
-  RotateCcw,
-  Save,
-  Shuffle,
-  Sparkles,
-  Trash2,
-  X
-} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { BattleView } from "./components/BattleView";
 import { GameGuide } from "./components/GameGuide";
 import { MapView } from "./components/MapView";
+import { PixelIcon } from "./components/PixelIcon";
 import { PixelPetSprite } from "./components/PixelSprite";
 import { ShortcutHint } from "./components/ShortcutHint";
 import { useSkillInfo } from "./components/SkillInfo";
@@ -196,7 +180,7 @@ function DexDetailModal({ speciesId, language, onClose }: { speciesId: string; l
     <div className="modal-backdrop">
       <section className="dex-detail-panel">
         <button className="modal-close square-button" type="button" onClick={onClose} title={t(language, "close")}>
-          <X size={18} />
+          <PixelIcon name="x" size={18} />
         </button>
         <div className="dex-detail-hero">
           <PixelPetSprite speciesId={species.id} element={species.element} growthLevel={species.growthLevel} size="large" active />
@@ -632,14 +616,14 @@ export function App() {
             onClick={() => setLanguage((current) => (current === "zh" ? "ja" : "zh"))}
             title={t(language, "language")}
           >
-            <Languages size={18} />
+            <PixelIcon name="languages" size={18} />
             <span>{language === "zh" ? t(language, "japanese") : t(language, "chinese")}</span>
           </button>
           <button className="square-button" onClick={() => saveGame(game)} title={t(language, "save")}>
-            <Save size={18} />
+            <PixelIcon name="save" size={18} />
           </button>
           <button className="square-button" onClick={resetGame} title={t(language, "reset")}>
-            <RotateCcw size={18} />
+            <PixelIcon name="rotate" size={18} />
           </button>
         </div>
       </header>
@@ -697,23 +681,23 @@ export function App() {
           <nav className="panel-tabs">
             <button className={panel === "party" ? "active" : ""} onClick={() => setPanel("party")}>
               <ShortcutHint value="1" />
-              <PawPrint size={17} /> {t(language, "party")}
+              <PixelIcon name="paw" size={17} /> {t(language, "party")}
             </button>
             <button className={panel === "storage" ? "active" : ""} onClick={() => setPanel("storage")}>
               <ShortcutHint value="2" />
-              <Archive size={17} /> {t(language, "storage")}
+              <PixelIcon name="archive" size={17} /> {t(language, "storage")}
             </button>
             <button className={panel === "fusion" ? "active" : ""} onClick={() => setPanel("fusion")}>
               <ShortcutHint value="3" />
-              <Shuffle size={17} /> {t(language, "fusion")}
+              <PixelIcon name="shuffle" size={17} /> {t(language, "fusion")}
             </button>
             <button className={panel === "dex" ? "active" : ""} onClick={() => setPanel("dex")}>
               <ShortcutHint value="4" />
-              <BookOpen size={17} /> {t(language, "dex")}
+              <PixelIcon name="book" size={17} /> {t(language, "dex")}
             </button>
             <button className={panel === "maps" ? "active" : ""} onClick={() => setPanel("maps")}>
               <ShortcutHint value="5" />
-              <Map size={17} /> {t(language, "maps")}
+              <PixelIcon name="map" size={17} /> {t(language, "maps")}
             </button>
           </nav>
 
@@ -732,7 +716,7 @@ export function App() {
                       actions={
                         <>
                           <button onClick={() => useFruit(pet.uid)}>
-                            <HeartPulse size={16} /> {t(language, "heal")}
+                            <PixelIcon name="heartPulse" size={16} /> {t(language, "heal")}
                           </button>
                           <button onClick={() => moveToStorage(pet.uid)}>{t(language, "store")}</button>
                           <button
@@ -740,10 +724,10 @@ export function App() {
                             disabled={species.growthLevel !== 3 || !enhanceCost || !canEnhance}
                             title={enhanceCost ? `${t(language, "enhance")} ${enhanceCost} ${t(language, "crystal")}` : t(language, "maxEnhance")}
                           >
-                            <ChevronUp size={16} /> {t(language, "enhance")}
+                            <PixelIcon name="chevronUp" size={16} /> {t(language, "enhance")}
                           </button>
                           <button disabled title={t(language, "partyCannotDecompose")}>
-                            <Trash2 size={16} /> {t(language, "decompose")}
+                            <PixelIcon name="trash" size={16} /> {t(language, "decompose")}
                           </button>
                         </>
                       }
@@ -774,10 +758,10 @@ export function App() {
                               disabled={species.growthLevel !== 3 || !enhanceCost || !canEnhance}
                               title={enhanceCost ? `${t(language, "enhance")} ${enhanceCost} ${t(language, "crystal")}` : t(language, "maxEnhance")}
                             >
-                              <ChevronUp size={16} /> {t(language, "enhance")}
+                              <PixelIcon name="chevronUp" size={16} /> {t(language, "enhance")}
                             </button>
                             <button onClick={() => decomposePet(pet.uid)}>
-                              <Trash2 size={16} /> {t(language, "decompose")}
+                              <PixelIcon name="trash" size={16} /> {t(language, "decompose")}
                             </button>
                           </>
                         }
@@ -793,7 +777,7 @@ export function App() {
             {panel === "fusion" ? (
               <div className="fusion-panel">
                 <div className="fusion-status">
-                  <Sparkles size={18} />
+                  <PixelIcon name="sparkles" size={18} />
                   {fusionPick.length < 2 ? t(language, "fusionHint") : fusionCheck?.ok ? t(language, "canFuse") : fusionReason(language, fusionCheck?.reason)}
                 </div>
                 <div className="fusion-grid">
@@ -817,7 +801,7 @@ export function App() {
                   })}
                 </div>
                 <button className="primary wide" disabled={!fusionCheck?.ok} onClick={handleFuse}>
-                  <Shuffle size={17} /> {t(language, "confirmFusion")}
+                  <PixelIcon name="shuffle" size={17} /> {t(language, "confirmFusion")}
                 </button>
               </div>
             ) : null}
@@ -879,15 +863,15 @@ export function App() {
 
       <section className="quest-strip">
         <div>
-          <Footprints size={17} />
+          <PixelIcon name="footprints" size={17} />
           {t(language, "ownedProgress")} {discoveredCount}/{PETS.length}
         </div>
         <div>
-          <Shuffle size={17} />
+          <PixelIcon name="shuffle" size={17} />
           {t(language, "initialFusion")} {game.firstLv1FusionDone ? t(language, "done") : t(language, "notDone")}
         </div>
         <div>
-          <Sparkles size={17} />
+          <PixelIcon name="sparkles" size={17} />
           {t(language, "evolvedFusion")} {game.firstLv2FusionDone ? t(language, "done") : t(language, "notDone")}
         </div>
       </section>

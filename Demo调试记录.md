@@ -575,3 +575,35 @@ https://healthcare-actively-platforms-ranger.trycloudflare.com
 - `scripts/fusionValidation.ts` 验证通过，295 组同阶段合成候选均可在固定成功骰点下正常生成结果。
 - `scripts/bossDefenseRegression.ts` 回归通过，确认 Boss 战防御循环旧问题未回归。
 - `scripts/elementMatchupRegression.ts` 回归通过，确认属性相克伤害公式未受合成/强化经济改动影响。
+
+## 32. 64x64 原生像素资源链路修复 v2.8
+
+已定位问题：
+
+- `src/components/PixelSprite.tsx` 旧实现使用 24x24 基础网格，再通过 `upscalePetGrid` / `upscaleSymbolGrid` 映射到 64x64，违反“源必须为 64x64”的要求。
+- `.pixel-sprite` 旧 CSS 使用 `--p: 0.375px / 0.75px / 1.125px / 1.5px` 和战斗场景 `clamp(...)`，会产生非整数像素缩放。
+- `.tile-grid` 旧实现使用 `repeat(15, minmax(..., 1fr))`，地图格子会随容器变成非 64x64 尺寸。
+- 技能/命中特效旧动画存在 `scale(0.7)`、`scale(1.25)`、`scale(1.5)` 等非整数缩放。
+- UI 图标旧实现来自 `lucide-react` SVG，不属于 64x64 原生像素资源。
+
+已完成：
+
+- 宠物 sprite 和主角 sprite 改为直接写入 64x64 网格，移除旧的 24x24 源缓冲与 upscale 函数。
+- 所有 `.pixel-sprite` 显示单元改为整数：普通 1x 为 64x64，完全体/大型显示使用 2x 为 128x128。
+- 地图瓦片固定为 64x64；移动端不再压缩瓦片，改为保留 64x64 并横向滚动地图视窗。
+- 战斗特效移除非整数 `scale(...)`，保留位移、透明度和 steps 动画。
+- 新增 `PixelIcon`：所有 UI 图标以 64x64 canvas 原生绘制，绘制前设置 `imageSmoothingEnabled = false`、`webkitImageSmoothingEnabled = false`、`mozImageSmoothingEnabled = false`。
+- 全局 canvas / pixel icon / tile / sprite CSS 均设置 `image-rendering: pixelated` 与 `image-rendering: crisp-edges`。
+- 移除 `lucide-react` 图标使用，按钮图标全部替换为 64x64 原生像素 canvas 图标。
+- 新增 `scripts/pixelAssetAudit.mjs` 自检脚本，检查 64x64 源、无旧 upscale、无小数 sprite 单元、地图 64px、无非镜像 scale、无 lucide SVG 残留。
+
+已检查：
+
+- `./.tools/bin/node scripts/pixelAssetAudit.mjs` 通过，确认像素资源链路检查无失败项。
+- `./.tools/bin/npm run build` 通过，生成 JS `index-bc824b14.js`、CSS `index-339c6a1e.css`。
+- `GITHUB_PAGES=true ./.tools/bin/npm run build` 通过，确认 GitHub Pages 子路径构建正常。
+- `scripts/gameplaySystemsRegression.ts` 回归通过，确认玩法系统未受像素资源链路改动影响。
+- `scripts/fusionValidation.ts` 验证通过。
+- `scripts/bossDefenseRegression.ts` 回归通过。
+- `scripts/elementMatchupRegression.ts` 回归通过。
+- 本地预览 `http://127.0.0.1:5173/` 可正常返回页面入口。

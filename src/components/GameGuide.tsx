@@ -1,6 +1,6 @@
-import { X } from "lucide-react";
 import { useState } from "react";
 import type { Language } from "../i18n";
+import { PixelIcon } from "./PixelIcon";
 
 interface GuideSection {
   id: string;
@@ -176,7 +176,7 @@ export function GameGuide({ language, onClose }: { language: Language; onClose: 
             <span>{language === "ja" ? "基本だけを確認して、細かい発見は冒険の中へ。" : "只整理基础上手信息，细节留给探索。"}</span>
           </div>
           <button className="square-button" type="button" onClick={onClose} aria-label={language === "ja" ? "閉じる" : "关闭"}>
-            <X size={18} />
+            <PixelIcon name="x" size={18} />
           </button>
         </header>
 

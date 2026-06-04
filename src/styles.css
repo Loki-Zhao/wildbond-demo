@@ -24,6 +24,18 @@ button {
   font: inherit;
 }
 
+canvas,
+.pixel-icon {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.pixel-icon {
+  display: inline-block;
+  flex: 0 0 auto;
+  vertical-align: middle;
+}
+
 button:disabled {
   cursor: not-allowed;
   opacity: 0.48;
@@ -240,18 +252,24 @@ button:disabled {
 
 .tile-grid {
   display: grid;
-  width: min(100%, 984px);
-  grid-template-columns: repeat(15, minmax(32px, 1fr));
+  width: min(100%, 960px);
+  grid-template-columns: repeat(15, 64px);
+  grid-auto-rows: 64px;
   justify-content: center;
   gap: 2px;
   margin: 0 auto;
   padding: 12px;
+  overflow: auto;
   background: #2f3a36;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
 }
 
 .tile {
   position: relative;
   display: grid;
+  width: 64px;
+  height: 64px;
   aspect-ratio: 1;
   min-height: 0;
   place-items: center;
@@ -1135,13 +1153,21 @@ button {
   border-top: 0;
   border-bottom: var(--pixel-border);
   background: #1b2422;
+  grid-template-columns: repeat(15, 64px);
+  grid-auto-rows: 64px;
+  overflow: auto;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
 }
 
 .tile {
+  width: 64px;
+  height: 64px;
   min-height: 0;
   border-radius: 0;
   border: 1px solid rgba(27, 36, 34, 0.28);
   image-rendering: pixelated;
+  image-rendering: crisp-edges;
 }
 
 .tile::before,
@@ -1536,7 +1562,7 @@ button {
 }
 
 .pixel-sprite {
-  --p: 1.125px;
+  --p: 1px;
   --sprite-columns: 64;
   --sprite-rows: 64;
   display: inline-grid;
@@ -1548,6 +1574,7 @@ button {
   justify-self: center;
   filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.3));
   image-rendering: pixelated;
+  image-rendering: crisp-edges;
 }
 
 .pixel-player {
@@ -1556,19 +1583,19 @@ button {
 }
 
 .pixel-tiny {
-  --p: 0.375px;
+  --p: 1px;
 }
 
 .pixel-small {
-  --p: 0.75px;
+  --p: 1px;
 }
 
 .pixel-medium {
-  --p: 1.125px;
+  --p: 1px;
 }
 
 .pixel-large {
-  --p: 1.5px;
+  --p: 2px;
 }
 
 .pixel {
@@ -2267,28 +2294,28 @@ button {
 @keyframes effect-flight {
   0% {
     opacity: 0;
-    transform: translate(-24vw, 24px) scale(0.7);
+    transform: translate(-24vw, 24px);
   }
   25% {
     opacity: 1;
   }
   100% {
     opacity: 0;
-    transform: translate(22vw, -18px) scale(1.25);
+    transform: translate(22vw, -18px);
   }
 }
 
 @keyframes effect-rise {
   0% {
     opacity: 0;
-    transform: translateY(42px) scale(0.7);
+    transform: translateY(42px);
   }
   25% {
     opacity: 1;
   }
   100% {
     opacity: 0;
-    transform: translateY(-80px) scale(1.2);
+    transform: translateY(-80px);
   }
 }
 
@@ -2331,11 +2358,16 @@ button {
   }
 
   .tile-grid {
-    grid-template-columns: repeat(15, minmax(18px, 1fr));
+    grid-template-columns: repeat(15, 64px);
+    grid-auto-rows: 64px;
+    justify-content: start;
+    overflow-x: auto;
     padding: 5px;
   }
 
   .tile {
+    width: 64px;
+    height: 64px;
     min-height: 0;
   }
 
@@ -2486,7 +2518,7 @@ button {
   }
 
   .unit-topline .pixel-sprite {
-    --p: 1.125px;
+    --p: 1px;
   }
 
   .battle-command {
@@ -2541,7 +2573,7 @@ button {
   }
 
   .pixel-large {
-    --p: 1.125px;
+    --p: 1px;
   }
 }
 
@@ -2670,11 +2702,11 @@ button {
 }
 
 .combatant-slot .pixel-sprite {
-  --p: clamp(1.12px, 0.17vw, 1.9px);
+  --p: 1px;
 }
 
 .combatant-slot .pixel-large {
-  --p: clamp(1.5px, 0.21vw, 2.25px);
+  --p: 2px;
 }
 
 .combatant-nameplate {
@@ -2873,28 +2905,28 @@ button {
 @keyframes hit-spark {
   0% {
     opacity: 0;
-    transform: translate(-50%, -50%) scale(0.4);
+    transform: translate(-50%, -50%);
   }
   35% {
     opacity: 1;
   }
   100% {
     opacity: 0;
-    transform: translate(-50%, -50%) scale(1.5);
+    transform: translate(-50%, -50%);
   }
 }
 
 @keyframes effect-flight-enemy {
   0% {
     opacity: 0;
-    transform: translate(24vw, 24px) scale(0.7);
+    transform: translate(24vw, 24px);
   }
   25% {
     opacity: 1;
   }
   100% {
     opacity: 0;
-    transform: translate(-22vw, -18px) scale(1.25);
+    transform: translate(-22vw, -18px);
   }
 }
 
@@ -2958,7 +2990,7 @@ button {
 
   .combatant-slot .pixel-sprite,
   .combatant-slot .pixel-large {
-    --p: 1.15px;
+    --p: 1px;
   }
 
   .combatant-platform {

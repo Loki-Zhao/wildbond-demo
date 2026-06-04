@@ -1,9 +1,9 @@
-import { Home, Info, MapPin, ShieldPlus, Swords } from "lucide-react";
 import type { CSSProperties } from "react";
 import { ELEMENT_COLORS } from "../game/balance";
 import { distance, getTerrainAt } from "../game/mapLogic";
 import type { MapDefinition } from "../game/types";
 import { elementLabel, mapName, t, type Language } from "../i18n";
+import { PixelIcon } from "./PixelIcon";
 import { PixelPlayerSprite } from "./PixelSprite";
 import { ShortcutHint } from "./ShortcutHint";
 
@@ -112,7 +112,7 @@ export function MapView({ map, position, defeated, bossChallengeLevel, maxBossCh
           </span>
         </div>
         <div className="coord-pill">
-          <MapPin size={16} />
+          <PixelIcon name="mapPin" size={16} />
           {position.x},{position.y}
         </div>
       </div>
@@ -122,20 +122,20 @@ export function MapView({ map, position, defeated, bossChallengeLevel, maxBossCh
       <div className="map-actions">
         <button className="icon-button" onClick={onReturnHome} title={t(language, "returnHome")}>
           <ShortcutHint value="Q" />
-          <Home size={18} />
+          <PixelIcon name="home" size={18} />
           {t(language, "returnHome")}
         </button>
         <button className="icon-button" disabled={!nearCamp} onClick={onHeal} title={t(language, "campHeal")}>
           <ShortcutHint value="W" />
-          <ShieldPlus size={18} />
+          <PixelIcon name="shieldPlus" size={18} />
           {t(language, "campHeal")}
         </button>
         <button className="icon-button guide-action" onClick={onGuide} title={t(language, "gameGuide")}>
-          <Info size={18} />
+          <PixelIcon name="info" size={18} />
           {t(language, "gameGuide")}
         </button>
         <button className="icon-button danger" disabled={bossChallengeDisabled} onClick={onBoss} title={bossChallengeTitle}>
-          <Swords size={18} />
+          <PixelIcon name="swords" size={18} />
           {bossChallengeComplete ? t(language, "bossChallengeComplete") : `${t(language, "challengeBoss")} +${nextBossChallengeLevel}/${maxBossChallengeLevel}`}
         </button>
       </div>
