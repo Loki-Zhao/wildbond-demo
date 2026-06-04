@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import { ELEMENT_COLORS } from "../game/balance";
 import { distance, getTerrainAt } from "../game/mapLogic";
 import type { MapDefinition } from "../game/types";
@@ -18,6 +18,7 @@ interface MapViewProps {
   onReturnHome: () => void;
   onGuide: () => void;
   onBoss: () => void;
+  onTileMove?: (x: number, y: number) => void;
 }
 
 const viewWidth = 15;
@@ -65,11 +66,44 @@ const detailVariant = (x: number, y: number, mapId: string): number => {
   return Math.abs((x * 37 + y * 61 + seed) % 5);
 };
 
-export function MapView({ map, position, defeated, bossChallengeLevel, maxBossChallengeLevel, language, onHeal, onReturnHome, onGuide, onBoss }: MapViewProps) {
+export function MapView({
+  map,
+  position,
+  defeated,
+  bossChallengeLevel,
+  maxBossChallengeLevel,
+  language,
+  onHeal,
+  onReturnHome,
+  onGuide,
+  onBoss,
+  onTileMove
+}: MapViewProps) {
   const { ref: tileStageRef, scale: tileScale } = useMapContainScale();
+  const touchStartRef = useRef<{ pointerId: number; x: number; y: number } | null>(null);
   const startX = position.x - Math.floor(viewWidth / 2);
   const startY = position.y - Math.floor(viewHeight / 2);
   const tiles = [];
+
+  const handleTilePointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== "touch") return;
+    touchStartRef.current = {
+      pointerId: event.pointerId,
+      x: event.clientX,
+      y: event.clientY
+    };
+  };
+
+  const handleTilePointerUp = (event: PointerEvent<HTMLDivElement>, worldX: number, worldY: number, outside: boolean) => {
+    if (!onTileMove || outside || event.pointerType !== "touch") return;
+    const start = touchStartRef.current;
+    touchStartRef.current = null;
+    if (!start || start.pointerId !== event.pointerId) return;
+    const moved = Math.hypot(event.clientX - start.x, event.clientY - start.y);
+    if (moved > 10) return;
+    event.preventDefault();
+    onTileMove(worldX, worldY);
+  };
 
   for (let y = 0; y < viewHeight; y += 1) {
     for (let x = 0; x < viewWidth; x += 1) {
@@ -94,7 +128,13 @@ export function MapView({ map, position, defeated, bossChallengeLevel, maxBossCh
       tiles.push(
         <div
           className={`tile tile-${terrain} tile-detail-${variant} ${isBoss && defeated ? "tile-cleared" : ""}`}
+          data-mobile-target={!outside ? "true" : undefined}
           key={`${worldX}-${worldY}`}
+          onPointerCancel={() => {
+            touchStartRef.current = null;
+          }}
+          onPointerDown={handleTilePointerDown}
+          onPointerUp={(event) => handleTilePointerUp(event, worldX, worldY, outside)}
           style={
             {
               "--ground": map.palette.ground,

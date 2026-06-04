@@ -312,6 +312,17 @@ export function App() {
     setGame(moved);
   };
 
+  const moveTowardTile = (targetX: number, targetY: number) => {
+    if (targetX === game.position.x && targetY === game.position.y) return;
+    const deltaX = targetX - game.position.x;
+    const deltaY = targetY - game.position.y;
+    if (Math.abs(deltaX) >= Math.abs(deltaY)) {
+      move(Math.sign(deltaX), 0);
+      return;
+    }
+    move(0, Math.sign(deltaY));
+  };
+
   const handleBattleResult = (resultBattle: BattleState, victory?: boolean, defeat?: boolean) => {
     if (victory) {
       setGame((current) => finishBattle(current, resultBattle, { bossDefeated: resultBattle.isBoss }));
@@ -621,9 +632,11 @@ export function App() {
           </button>
           <button className="square-button" onClick={() => saveGame(game)} title={t(language, "save")}>
             <PixelIcon name="save" size={18} />
+            <span className="mobile-text-label">{t(language, "save")}</span>
           </button>
           <button className="square-button" onClick={resetGame} title={t(language, "reset")}>
             <PixelIcon name="rotate" size={18} />
+            <span className="mobile-text-label">{t(language, "reset")}</span>
           </button>
         </div>
       </header>
@@ -640,6 +653,7 @@ export function App() {
             onHeal={() => setGame((current) => healParty(current))}
             onReturnHome={returnHome}
             onGuide={() => setGuideOpen(true)}
+            onTileMove={moveTowardTile}
             onBoss={() => {
               if (!defeatedCurrentBoss || currentBossChallengeLevel >= MAX_BOSS_CHALLENGE_LEVEL) return;
               startBattle(createBossBattle(game, currentBossChallengeLevel + 1));

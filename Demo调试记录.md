@@ -606,6 +606,39 @@ https://healthcare-actively-platforms-ranger.trycloudflare.com
 - `scripts/fusionValidation.ts` 验证通过。
 - `scripts/bossDefenseRegression.ts` 回归通过。
 - `scripts/elementMatchupRegression.ts` 回归通过。
+
+## 34. 手机端滚动菜单、触摸地图移动与按钮文字 v3.0
+
+已定位问题：
+
+- v2.9 为保证整屏不溢出，手机端也继承了 `body/html/#root overflow: hidden` 和 `.app-shell height: 100dvh`，导致下方队伍、仓库、合成、图鉴等菜单内容被压在底部小区域内，无法通过页面滚动查看。
+- 手机端方向键仍占用地图下方空间，不适合竖屏操作。
+- `max-width: 520px` 下部分按钮文字被隐藏或压成 `font-size: 0`，导致手机端按钮只剩图标，含义不清晰。
+
+已完成：
+
+- PC 端保持 v2.9 的固定视口布局与方向键移动逻辑不变。
+- 手机端恢复页面纵向滚动：`body/html/#root` 允许 `overflow-y: auto`，`.app-shell` 改为自适应高度，菜单区域自然向下展开。
+- 手机端地图尺寸保持 v2.9 的紧凑显示：竖屏地图壳约 `58dvh`，横屏地图壳保持约 `100dvh - 90px`，地图逻辑层仍为 `1012x748` contain 缩放。
+- 手机端隐藏方向键 `.dpad`，释放屏幕空间。
+- 手机端新增触摸地图移动：点击地图任一可见可用格，会朝该格方向移动一步；点击相邻格等同进入该格，仍保留逐格移动、暗雷遇敌和 Boss 触发逻辑。
+- 触摸地图支持轻点判定，拖动超过 10px 不触发移动，避免页面滚动时误移动。
+- 手机端按钮改为文字优先显示：隐藏操作按钮中的像素图标，恢复地图按钮、顶部保存/重置、语言按钮、菜单标签等文字；保存/重置按钮新增移动端文字标签。
+- 新增 `scripts/mobileMapTapQa.mjs`，用于模拟手机触摸地图并确认坐标变化。
+- `scripts/responsiveViewportQa.mjs` 更新：手机端允许纵向滚动，检查方向键隐藏、按钮文字可读、地图仍在视口内、无横向滚动。
+
+已检查：
+
+- `./.tools/bin/npm run build` 通过，生成 JS `index-f8dda9ab.js`、CSS `index-d02de574.css`。
+- `GITHUB_PAGES=true ./.tools/bin/npm run build` 通过，确认 GitHub Pages 子路径构建正常。
+- `./.tools/bin/node scripts/pixelAssetAudit.mjs` 通过，确认 64x64 像素资源链路未回退。
+- `./.tools/bin/node scripts/responsiveViewportQa.mjs http://127.0.0.1:5173/` 通过，检查 `1920x1080`、`1366x768`、`390x844` 手机竖屏、`844x390` 手机横屏。
+- 手机竖屏和横屏确认：无横向滚动，页面可纵向滚动，方向键隐藏，地图仍在视口内，按钮文字可读。
+- `./.tools/bin/node scripts/mobileMapTapQa.mjs http://127.0.0.1:5173/` 通过，手机触摸地图后坐标从 `8,8` 移动到 `9,8`。
+- `scripts/gameplaySystemsRegression.ts` 回归通过。
+- `scripts/fusionValidation.ts` 验证通过。
+- `scripts/bossDefenseRegression.ts` 回归通过。
+- `scripts/elementMatchupRegression.ts` 回归通过。
 - 本地预览 `http://127.0.0.1:5173/` 可正常返回页面入口。
 
 ## 33. PC / 手机视口自适应与 64px 像素保持 v2.9

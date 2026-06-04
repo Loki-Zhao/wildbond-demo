@@ -33,8 +33,13 @@ for (const viewport of viewports) {
   const page = await context.newPage();
   await page.goto(url, { waitUntil: "networkidle" });
   await page.waitForSelector(".app-shell");
+  const starterCards = page.locator(".starter-card");
+  if ((await starterCards.count()) > 0) {
+    await starterCards.first().click();
+    await page.waitForTimeout(150);
+  }
 
-  const metrics = await page.evaluate(() => {
+  const metrics = await page.evaluate((isMobileViewport) => {
     const getRect = (selector) => {
       const element = document.querySelector(selector);
       if (!element) return null;
@@ -58,12 +63,24 @@ for (const viewport of viewports) {
       rect.top >= -0.5 &&
       rect.right <= viewportSize.width + 0.5 &&
       rect.bottom <= viewportSize.height + 0.5;
+    const withinViewportWidth = (rect) =>
+      Boolean(rect) &&
+      rect.left >= -0.5 &&
+      rect.right <= viewportSize.width + 0.5;
     const body = document.body;
     const documentElement = document.documentElement;
+    const dpad = document.querySelector(".dpad");
+    const dpadVisible = Boolean(dpad && getComputedStyle(dpad).display !== "none");
     const tileGrid = document.querySelector(".tile-grid");
     const tileGridStyle = tileGrid ? getComputedStyle(tileGrid) : null;
     const tileStage = getRect(".tile-stage");
     const tileGridRect = getRect(".tile-grid");
+    const hasReadableButtonText = (selector) =>
+      Array.from(document.querySelectorAll(selector)).every((element) => {
+        const text = element.textContent?.trim() ?? "";
+        const fontSize = Number.parseFloat(getComputedStyle(element).fontSize);
+        return text.length > 0 && fontSize >= 9;
+      });
 
     return {
       bodyScroll: {
@@ -73,13 +90,18 @@ for (const viewport of viewports) {
         scrollWidth: body.scrollWidth
       },
       checks: {
-        appInside: inside(getRect(".app-shell")),
-        dashboardInside: inside(getRect(".dashboard")),
-        dpadInside: inside(getRect(".dpad")),
+        appInside: isMobileViewport ? withinViewportWidth(getRect(".app-shell")) : inside(getRect(".app-shell")),
+        dashboardInside: isMobileViewport ? withinViewportWidth(getRect(".dashboard")) : inside(getRect(".dashboard")),
+        dpadMobileHidden: !isMobileViewport || !dpadVisible,
+        dpadInside: !dpadVisible || inside(getRect(".dpad")),
         mapInside: inside(getRect(".map-shell")),
         noBodyOverflowX: body.scrollWidth <= documentElement.clientWidth + 1,
-        noBodyOverflowY: body.scrollHeight <= documentElement.clientHeight + 1,
-        rightInside: inside(getRect(".right-column")),
+        bodyYFitsDesktopOrScrollsMobile: isMobileViewport
+          ? body.scrollHeight > documentElement.clientHeight + 1
+          : body.scrollHeight <= documentElement.clientHeight + 1,
+        mobileButtonsUseReadableText:
+          !isMobileViewport || hasReadableButtonText(".top-actions button, .map-actions button, .panel-tabs button"),
+        rightInside: isMobileViewport ? withinViewportWidth(getRect(".right-column")) : inside(getRect(".right-column")),
         starterPanelInside: !document.querySelector(".starter-panel") || inside(getRect(".starter-panel")),
         tileGridInsideStage:
           Boolean(tileStage && tileGridRect) &&
@@ -105,7 +127,7 @@ for (const viewport of viewports) {
       tileTransform: tileGridStyle?.transform ?? "",
       viewport: viewportSize
     };
-  });
+  }, viewport.isMobile);
 
   results.push({
     ...viewport,

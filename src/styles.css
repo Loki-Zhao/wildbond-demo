@@ -46,6 +46,10 @@ canvas,
   vertical-align: middle;
 }
 
+.mobile-text-label {
+  display: none;
+}
+
 button:disabled {
   cursor: not-allowed;
   opacity: 0.48;
@@ -305,6 +309,7 @@ button:disabled {
   background: #2f3a36;
   transform: translate(-50%, -50%) scale(var(--map-scale, 1));
   transform-origin: center;
+  touch-action: pan-y;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
 }
@@ -3427,5 +3432,156 @@ button {
 
   .right-column {
     padding: 5px;
+  }
+}
+
+/* Mobile exploration pass: keep the map compact, but let menus scroll naturally. */
+@media (max-width: 900px), (hover: none), (pointer: coarse) {
+  html,
+  body,
+  #root {
+    height: auto;
+    min-height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  body {
+    min-height: 100dvh;
+    touch-action: pan-y;
+  }
+
+  .app-shell {
+    width: 100%;
+    height: auto;
+    min-height: 100dvh;
+    grid-template-rows: auto auto auto;
+    overflow: visible;
+  }
+
+  .dashboard {
+    height: auto;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+  }
+
+  .left-column {
+    grid-template-rows: auto;
+  }
+
+  .map-shell {
+    height: clamp(360px, 58dvh, 500px);
+  }
+
+  .right-column {
+    display: block;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .panel-body {
+    overflow: visible;
+  }
+
+  .dpad {
+    display: none;
+  }
+
+  .tile[data-mobile-target="true"] {
+    cursor: pointer;
+  }
+
+  .tile[data-mobile-target="true"]:active {
+    filter: brightness(1.14);
+  }
+
+  .mobile-text-label {
+    display: inline;
+  }
+
+  .top-actions .square-button,
+  .language-button,
+  .icon-button,
+  .panel-tabs button,
+  .card-actions button,
+  .primary,
+  .skill-button {
+    width: auto;
+    min-width: 0;
+    gap: 0;
+    font-size: 12px;
+    line-height: 1.15;
+    text-align: center;
+    white-space: normal;
+  }
+
+  .top-actions .square-button {
+    display: inline-flex;
+    min-height: 34px;
+    padding: 6px 8px;
+  }
+
+  .language-button span {
+    display: inline;
+  }
+
+  .top-actions .square-button .pixel-icon,
+  .language-button .pixel-icon,
+  .icon-button .pixel-icon,
+  .panel-tabs .pixel-icon,
+  .card-actions button .pixel-icon,
+  .primary .pixel-icon,
+  .skill-button .pixel-icon,
+  .capture-row .pixel-icon {
+    display: none;
+  }
+
+  .panel-tabs button {
+    font-size: 12px;
+  }
+
+  .map-actions .icon-button {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 520px), (hover: none) and (pointer: coarse) {
+  .panel-tabs button {
+    font-size: 11px;
+  }
+
+  .map-actions .icon-button {
+    font-size: 10px;
+  }
+}
+
+@media (max-height: 560px) and (orientation: landscape) and (pointer: coarse) {
+  html,
+  body,
+  #root {
+    overflow-y: auto;
+  }
+
+  .app-shell {
+    grid-template-rows: auto;
+  }
+
+  .topbar {
+    display: flex;
+  }
+
+  .dashboard {
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 32vw);
+    grid-template-rows: auto;
+  }
+
+  .map-shell {
+    height: calc(100dvh - 90px);
+    min-height: 280px;
+  }
+
+  .right-column {
+    height: auto;
   }
 }
