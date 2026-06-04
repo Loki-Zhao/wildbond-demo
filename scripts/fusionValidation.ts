@@ -4,6 +4,8 @@ import { createInitialState, createPetInstance } from "../src/game/state";
 import { MAX_PET_LEVEL } from "../src/game/balance";
 import type { PetInstance } from "../src/game/types";
 
+declare const process: { exitCode?: number };
+
 const makePet = (speciesId: string, currentHp: number): PetInstance => ({
   ...createPetInstance(speciesId, MAX_PET_LEVEL),
   currentHp
@@ -31,7 +33,7 @@ for (let firstIndex = 0; firstIndex < validationPets.length; firstIndex += 1) {
       party: [makePet(firstSpecies.id, 1)],
       storage: [first, second]
     };
-    const result = fusePets(state, first.uid, second.uid);
+    const result = fusePets(state, first.uid, second.uid, () => 0);
     if (result.state.fusionCount !== state.fusionCount + 1) {
       failures.push(`${firstSpecies.id} + ${secondSpecies.id}: fusePets did not increment fusionCount`);
     }

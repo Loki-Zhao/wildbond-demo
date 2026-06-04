@@ -552,3 +552,26 @@ https://healthcare-actively-platforms-ranger.trycloudflare.com
 - `scripts/bossDefenseRegression.ts` 回归通过，确认 Boss 战防御循环旧问题未回归。
 - `scripts/elementMatchupRegression.ts` 回归通过，确认优势 120%、劣势 80%、同属性/无相克 100% 的伤害倍率仍作用在基础攻防结算之后。
 - 本地预览 `http://127.0.0.1:5173/` 可正常返回页面入口。
+
+## 31. 合成与强化失败概率 v2.7
+
+已完成：
+
+- 合成从必定成功改为概率成功：初始体 Lv10 合成进化体成功率 80%，进化体 Lv10 合成完全体成功率 50%。
+- 合成失败时，两只材料宠物都会消失，并留下材料两者中随机一只的 Lv1 个体。
+- 合成失败不会增加合成次数，也不会触发初始体/进化体首次合成解锁进度。
+- 强化从必定成功改为概率成功：+1 成功率 80%，+2 成功率 50%，+3 成功率 30%。
+- 强化失败后保留当前强化等级，但消耗掉的分解水晶不会返还。
+- 合成成功、合成失败、强化成功、强化失败都会显示 1 秒像素风操作提示框。
+- 队伍/仓库强化逻辑同步接入成功率；强化成功时继续保留原有 HP 上限补差逻辑。
+- 游戏方式说明与合成面板提示已补充合成/强化成功率和失败后果，支持中文与日语。
+- `scripts/gameplaySystemsRegression.ts` 新增 `fusionRiskEconomy`，覆盖合成成功率、失败结果、失败不推进合成进度、强化成功率配置。
+
+已检查：
+
+- `./.tools/bin/npm run build` 通过，生成 JS `index-7675e627.js`、CSS `index-e3e6478c.css`。
+- `GITHUB_PAGES=true ./.tools/bin/npm run build` 通过，确认 GitHub Pages 子路径构建正常。
+- `scripts/gameplaySystemsRegression.ts` 回归通过，包含新增 `fusionRiskEconomy`。
+- `scripts/fusionValidation.ts` 验证通过，295 组同阶段合成候选均可在固定成功骰点下正常生成结果。
+- `scripts/bossDefenseRegression.ts` 回归通过，确认 Boss 战防御循环旧问题未回归。
+- `scripts/elementMatchupRegression.ts` 回归通过，确认属性相克伤害公式未受合成/强化经济改动影响。

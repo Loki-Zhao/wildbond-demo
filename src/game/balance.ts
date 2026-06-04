@@ -30,6 +30,7 @@ export const MIN_CRIT_RATE = 10;
 export const MAX_CRIT_RATE = 50;
 export const MAX_ENHANCE_LEVEL = 3;
 export const ENHANCE_COSTS = [3, 6, 10] as const;
+export const ENHANCE_SUCCESS_RATES = [0.8, 0.5, 0.3] as const;
 export const ENHANCE_STAT_STEP = 0.08;
 export const ENHANCE_CRIT_STEP = 3;
 
@@ -105,6 +106,11 @@ export const clampEnhanceLevel = (level?: number): number => {
 export const enhancementCostForNext = (enhanceLevel = 0): number | undefined => {
   const level = clampEnhanceLevel(enhanceLevel);
   return level >= MAX_ENHANCE_LEVEL ? undefined : ENHANCE_COSTS[level];
+};
+
+export const enhancementSuccessRateForNext = (enhanceLevel = 0): number | undefined => {
+  const level = clampEnhanceLevel(enhanceLevel);
+  return level >= MAX_ENHANCE_LEVEL ? undefined : ENHANCE_SUCCESS_RATES[level];
 };
 
 export const enhancementSpent = (enhanceLevel = 0): number =>

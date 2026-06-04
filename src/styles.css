@@ -1786,6 +1786,33 @@ button {
   pointer-events: none;
 }
 
+.operation-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  z-index: 35;
+  max-width: min(88vw, 460px);
+  transform: translateX(-50%);
+  padding: 12px 18px;
+  border: 2px solid #24302d;
+  border-radius: 8px;
+  background: #fff6d7;
+  color: #24302d;
+  font-weight: 900;
+  text-align: center;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.24);
+  animation: operationToast 1s ease forwards;
+  pointer-events: none;
+}
+
+.operation-toast.success {
+  background: #ddf5d4;
+}
+
+.operation-toast.failure {
+  background: #ffe0d3;
+}
+
 @keyframes encounterNotice {
   0% {
     opacity: 0;
@@ -1799,6 +1826,22 @@ button {
   100% {
     opacity: 0;
     transform: translate(-50%, -8px);
+  }
+}
+
+@keyframes operationToast {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+  15%,
+  78% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, 8px);
   }
 }
 
@@ -2357,6 +2400,12 @@ button {
   .encounter-notice {
     top: 10px;
     padding: 8px 12px;
+    font-size: 14px;
+  }
+
+  .operation-toast {
+    bottom: 14px;
+    padding: 10px 12px;
     font-size: 14px;
   }
 

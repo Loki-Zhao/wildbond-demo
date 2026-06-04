@@ -32,6 +32,7 @@ import {
   MAX_PET_LEVEL,
   decomposeCrystalValue,
   enhancementCostForNext,
+  enhancementSuccessRateForNext,
   expToNext,
   getMaxHp,
   getPetStats,
@@ -73,6 +74,11 @@ import {
 } from "./i18n";
 
 type PanelId = "party" | "storage" | "fusion" | "dex" | "maps";
+type OperationToast = {
+  id: string;
+  message: string;
+  tone: "success" | "failure";
+};
 
 const isDesktopShortcutEnvironment = (): boolean =>
   typeof window !== "undefined" && window.matchMedia("(hover: hover) and (pointer: fine)").matches;
@@ -247,15 +253,30 @@ export function App() {
   const [fusionPick, setFusionPick] = useState<string[]>([]);
   const [dexDetailSpeciesId, setDexDetailSpeciesId] = useState<string | null>(null);
   const [guideOpen, setGuideOpen] = useState(false);
+  const [operationToast, setOperationToast] = useState<OperationToast | null>(null);
   const [language, setLanguage] = useState<Language>(() => readStoredLanguage());
 
   const activeMap = getMapDefinition(game.activeMapId);
   const defeatedCurrentBoss = game.defeatedBosses.includes(game.activeMapId);
   const currentBossChallengeLevel = Math.max(0, Math.min(MAX_BOSS_CHALLENGE_LEVEL, Math.round(game.bossChallengeWins?.[game.activeMapId] ?? 0)));
 
+  const showOperationToast = (message: string, tone: OperationToast["tone"]) => {
+    setOperationToast({
+      id: `${Date.now()}-${Math.random()}`,
+      message,
+      tone
+    });
+  };
+
   useEffect(() => {
     saveGame(game);
   }, [game]);
+
+  useEffect(() => {
+    if (!operationToast) return;
+    const timer = window.setTimeout(() => setOperationToast(null), 1000);
+    return () => window.clearTimeout(timer);
+  }, [operationToast]);
 
   useEffect(() => {
     writeStoredLanguage(language);
@@ -516,46 +537,62 @@ export function App() {
   };
 
   const enhancePet = (uid: string) => {
-    setGame((current) => {
-      const targetPet = [...current.party, ...current.storage].find((item) => item.uid === uid);
-      if (!targetPet) return current;
-      const species = getPetSpecies(targetPet.speciesId);
-      if (species.growthLevel !== 3) return addLog(current, "只有完全体宠物可以强化。");
-      const currentEnhance = targetPet.enhanceLevel ?? 0;
-      const cost = enhancementCostForNext(currentEnhance);
-      if (!cost) return addLog(current, "强化已经达到上限。");
-      if (current.inventory.crystals < cost) return addLog(current, "分解水晶不足。");
+    const targetPet = [...game.party, ...game.storage].find((item) => item.uid === uid);
+    if (!targetPet) return;
+    const species = getPetSpecies(targetPet.speciesId);
+    if (species.growthLevel !== 3) {
+      setGame(addLog(game, "只有完全体宠物可以强化。"));
+      return;
+    }
+    const currentEnhance = targetPet.enhanceLevel ?? 0;
+    const cost = enhancementCostForNext(currentEnhance);
+    const successRate = enhancementSuccessRateForNext(currentEnhance);
+    if (!cost || successRate === undefined) {
+      setGame(addLog(game, "强化已经达到上限。"));
+      return;
+    }
+    if (game.inventory.crystals < cost) {
+      setGame(addLog(game, "分解水晶不足。"));
+      return;
+    }
 
-      const upgrade = (pet: PetInstance): PetInstance => {
-        if (pet.uid !== uid) return pet;
-        const oldMaxHp = getMaxHp(pet);
-        const nextPet = { ...pet, enhanceLevel: currentEnhance + 1 };
-        const newMaxHp = getMaxHp(nextPet);
-        return {
-          ...nextPet,
-          currentHp: Math.min(newMaxHp, pet.currentHp + Math.max(0, newMaxHp - oldMaxHp))
-        };
+    const success = Math.random() < successRate;
+    const upgrade = (pet: PetInstance): PetInstance => {
+      if (pet.uid !== uid || !success) return pet;
+      const oldMaxHp = getMaxHp(pet);
+      const nextPet = { ...pet, enhanceLevel: currentEnhance + 1 };
+      const newMaxHp = getMaxHp(nextPet);
+      return {
+        ...nextPet,
+        currentHp: Math.min(newMaxHp, pet.currentHp + Math.max(0, newMaxHp - oldMaxHp))
       };
+    };
 
-      return addLog(
+    const message = success
+      ? `${species.name}强化到 +${currentEnhance + 1}。`
+      : `${species.name}强化失败，消耗分解水晶 x${cost}，当前仍为 +${currentEnhance}。`;
+    setGame(
+      addLog(
         {
-          ...current,
-          party: current.party.map(upgrade),
-          storage: current.storage.map(upgrade),
+          ...game,
+          party: game.party.map(upgrade),
+          storage: game.storage.map(upgrade),
           inventory: {
-            ...current.inventory,
-            crystals: current.inventory.crystals - cost
+            ...game.inventory,
+            crystals: game.inventory.crystals - cost
           }
         },
-        `${species.name}强化到 +${currentEnhance + 1}。`
-      );
-    });
+        message
+      )
+    );
+    showOperationToast(message, success ? "success" : "failure");
   };
 
   const handleFuse = () => {
     if (fusionPick.length !== 2) return;
     const result = fusePets(game, fusionPick[0], fusionPick[1]);
     setGame(result.state === game ? addLog(result.state, result.message) : result.state);
+    showOperationToast(result.message, result.outcome === "success" ? "success" : "failure");
     setFusionPick([]);
   };
 
@@ -567,6 +604,7 @@ export function App() {
     setBattleOutcome(null);
     setFusionPick([]);
     setGuideOpen(false);
+    setOperationToast(null);
     setGame(loadGame());
   };
 
@@ -886,6 +924,12 @@ export function App() {
             }
           }}
         />
+      ) : null}
+
+      {operationToast ? (
+        <div className={`operation-toast ${operationToast.tone}`} role="status" aria-live="polite">
+          {translateLog(language, operationToast.message)}
+        </div>
       ) : null}
 
       {guideOpen ? <GameGuide language={language} onClose={() => setGuideOpen(false)} /> : null}

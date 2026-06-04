@@ -3,6 +3,17 @@ import { GROWTH_LABELS, MAX_PET_LEVEL } from "./balance";
 import { createPetInstance, markSpecies, syncUnlocks } from "./state";
 import type { GameState, GrowthLevel, PetInstance } from "./types";
 
+type FusionSourceLevel = 1 | 2;
+type RandomSource = () => number;
+
+export const FUSION_SUCCESS_RATES: Record<FusionSourceLevel, number> = {
+  1: 0.8,
+  2: 0.5
+};
+
+export const fusionSuccessRateForGrowth = (growthLevel: GrowthLevel): number | undefined =>
+  growthLevel === 1 || growthLevel === 2 ? FUSION_SUCCESS_RATES[growthLevel] : undefined;
+
 export const canFuse = (a: PetInstance, b: PetInstance): { ok: boolean; reason?: string } => {
   if (a.uid === b.uid) return { ok: false, reason: "不能选择同一只宠物" };
   const speciesA = getPetSpecies(a.speciesId);
@@ -13,27 +24,36 @@ export const canFuse = (a: PetInstance, b: PetInstance): { ok: boolean; reason?:
   return { ok: true };
 };
 
-const randomSpeciesFromPool = (targetLevel: GrowthLevel, element?: ReturnType<typeof getPetSpecies>["element"]): string => {
+const pickRandom = <T,>(items: T[], random: RandomSource): T => items[Math.floor(random() * items.length)];
+
+const randomSpeciesFromPool = (targetLevel: GrowthLevel, random: RandomSource, element?: ReturnType<typeof getPetSpecies>["element"]): string => {
   const pool = element ? PETS_BY_LEVEL[targetLevel].filter((species) => species.element === element) : PETS_BY_LEVEL[targetLevel];
   const candidates = pool.length > 0 ? pool : PETS_BY_LEVEL[targetLevel];
-  return candidates[Math.floor(Math.random() * candidates.length)].id;
+  return pickRandom(candidates, random).id;
 };
 
-export const fusePets = (state: GameState, firstUid: string, secondUid: string): { state: GameState; message: string } => {
+export const fusePets = (
+  state: GameState,
+  firstUid: string,
+  secondUid: string,
+  random: RandomSource = Math.random
+): { state: GameState; message: string; outcome: "success" | "failure" | "invalid" } => {
   const collection = [...state.party, ...state.storage];
   const first = collection.find((pet) => pet.uid === firstUid);
   const second = collection.find((pet) => pet.uid === secondUid);
-  if (!first || !second) return { state, message: "合成对象不存在。" };
+  if (!first || !second) return { state, message: "合成对象不存在。", outcome: "invalid" };
 
   const check = canFuse(first, second);
-  if (!check.ok) return { state, message: check.reason ?? "无法合成。" };
+  if (!check.ok) return { state, message: check.reason ?? "无法合成。", outcome: "invalid" };
 
   const firstSpecies = getPetSpecies(first.speciesId);
   const secondSpecies = getPetSpecies(second.speciesId);
   const sourceLevel = firstSpecies.growthLevel;
   const targetLevel = (sourceLevel + 1) as GrowthLevel;
+  const successRate = fusionSuccessRateForGrowth(sourceLevel) ?? 0;
+  const success = random() < successRate;
   const lockedElement = firstSpecies.element === secondSpecies.element ? firstSpecies.element : undefined;
-  const resultSpeciesId = randomSpeciesFromPool(targetLevel, lockedElement);
+  const resultSpeciesId = success ? randomSpeciesFromPool(targetLevel, random, lockedElement) : pickRandom([first, second], random).speciesId;
   const resultPet = createPetInstance(resultSpeciesId);
   const resultSpecies = getPetSpecies(resultSpeciesId);
 
@@ -52,10 +72,15 @@ export const fusePets = (state: GameState, firstUid: string, secondUid: string):
         ...state,
         party: nextParty,
         storage: nextStorage,
-        fusionCount: state.fusionCount + 1,
-        firstLv1FusionDone: state.firstLv1FusionDone || sourceLevel === 1,
-        firstLv2FusionDone: state.firstLv2FusionDone || sourceLevel === 2,
-        log: [`合成成功，获得${GROWTH_LABELS[resultSpecies.growthLevel]}${resultSpecies.name} Lv1。`, ...state.log].slice(0, 80)
+        fusionCount: success ? state.fusionCount + 1 : state.fusionCount,
+        firstLv1FusionDone: state.firstLv1FusionDone || (success && sourceLevel === 1),
+        firstLv2FusionDone: state.firstLv2FusionDone || (success && sourceLevel === 2),
+        log: [
+          success
+            ? `合成成功，获得${GROWTH_LABELS[resultSpecies.growthLevel]}${resultSpecies.name} Lv1。`
+            : `合成失败，两只材料消失，留下${resultSpecies.name} Lv1。`,
+          ...state.log
+        ].slice(0, 80)
       },
       resultSpeciesId,
       true
@@ -64,6 +89,7 @@ export const fusePets = (state: GameState, firstUid: string, secondUid: string):
 
   return {
     state: nextState,
-    message: `合成成功：${resultSpecies.name} Lv1`
+    message: success ? `合成成功：${resultSpecies.name} Lv1` : `合成失败：留下${resultSpecies.name} Lv1`,
+    outcome: success ? "success" : "failure"
   };
 };

@@ -5,8 +5,10 @@ import {
   MAX_ENHANCE_LEVEL,
   MAX_CRIT_RATE,
   MIN_CRIT_RATE,
+  ENHANCE_SUCCESS_RATES,
   decomposeCrystalValue,
   enhancementCostForNext,
+  enhancementSuccessRateForNext,
   enhancementSpent,
   getBattleUnitStats,
   getStatsForSpecies,
@@ -28,6 +30,7 @@ import {
   wildEncounterCandidatesForPosition,
   wildEncounterProfileForPosition
 } from "../src/game/combat";
+import { FUSION_SUCCESS_RATES, fusePets, fusionSuccessRateForGrowth } from "../src/game/fusion";
 import { getStepAdjustedEncounterRate } from "../src/game/mapLogic";
 import { STARTER_EXP_LEVEL, chooseStarter, createInitialState, createPetInstance } from "../src/game/state";
 import type { BattleUnit, ElementType } from "../src/game/types";
@@ -70,8 +73,46 @@ const assertEnhancementEconomy = (): void => {
   assert(enhancementCostForNext(1) === 6, "enhance +2 should cost 6 crystals");
   assert(enhancementCostForNext(2) === 10, "enhance +3 should cost 10 crystals");
   assert(enhancementCostForNext(3) === undefined, "enhance +3 should be max");
+  assert(ENHANCE_SUCCESS_RATES[0] === 0.8, "enhance +1 should have 80% success rate");
+  assert(ENHANCE_SUCCESS_RATES[1] === 0.5, "enhance +2 should have 50% success rate");
+  assert(ENHANCE_SUCCESS_RATES[2] === 0.3, "enhance +3 should have 30% success rate");
+  assert(enhancementSuccessRateForNext(0) === 0.8, "enhance +1 rate helper should return 80%");
+  assert(enhancementSuccessRateForNext(1) === 0.5, "enhance +2 rate helper should return 50%");
+  assert(enhancementSuccessRateForNext(2) === 0.3, "enhance +3 rate helper should return 30%");
+  assert(enhancementSuccessRateForNext(3) === undefined, "max enhanced pet should have no next success rate");
   assert(enhancementSpent(3) === 19, "cumulative +3 spend should be 19 crystals");
   assert(decomposeCrystalValue({ ...pet, enhanceLevel: 3 }) === 22, "enhanced complete pet should refund base 3 plus spent crystals");
+};
+
+const assertFusionRiskEconomy = (): void => {
+  assert(FUSION_SUCCESS_RATES[1] === 0.8, "initial-to-evolved fusion should have 80% success rate");
+  assert(FUSION_SUCCESS_RATES[2] === 0.5, "evolved-to-complete fusion should have 50% success rate");
+  assert(fusionSuccessRateForGrowth(1) === 0.8, "initial fusion rate helper should return 80%");
+  assert(fusionSuccessRateForGrowth(2) === 0.5, "evolved fusion rate helper should return 50%");
+  assert(fusionSuccessRateForGrowth(3) === undefined, "complete pets should have no fusion success rate");
+
+  const initialA = createPetInstance("fire-lizard", MAX_PET_LEVEL);
+  const initialB = createPetInstance("bubble-dolphin", MAX_PET_LEVEL);
+  const success = fusePets({ ...createInitialState(), party: [], storage: [initialA, initialB] }, initialA.uid, initialB.uid, () => 0);
+  assert(success.outcome === "success", "low rng should make initial fusion succeed");
+  assert(success.state.fusionCount === 1, "successful fusion should increment fusion count");
+  assert(success.state.firstLv1FusionDone, "successful initial fusion should unlock first Lv1 fusion flag");
+  const successPets = [...success.state.party, ...success.state.storage];
+  assert(successPets.length === 1, "successful fusion should leave exactly one result pet");
+  assert(getPetSpecies(successPets[0].speciesId).growthLevel === 2, "successful initial fusion should create an evolved pet");
+  assert(successPets[0].expLevel === 1, "successful fusion result should start at Lv1");
+
+  const evolvedA = createPetInstance("magma-turtle", MAX_PET_LEVEL);
+  const evolvedB = createPetInstance("wave-otter", MAX_PET_LEVEL);
+  const rolls = [0.9, 0.99];
+  const failure = fusePets({ ...createInitialState(), party: [], storage: [evolvedA, evolvedB] }, evolvedA.uid, evolvedB.uid, () => rolls.shift() ?? 0);
+  assert(failure.outcome === "failure", "high rng should make evolved fusion fail");
+  assert(failure.state.fusionCount === 0, "failed fusion should not increment fusion count");
+  assert(!failure.state.firstLv2FusionDone, "failed evolved fusion should not unlock fusion progress");
+  const failurePets = [...failure.state.party, ...failure.state.storage];
+  assert(failurePets.length === 1, "failed fusion should still leave exactly one result pet");
+  assert([evolvedA.speciesId, evolvedB.speciesId].includes(failurePets[0].speciesId), "failed fusion result should come from one material pet");
+  assert(failurePets[0].expLevel === 1, "failed fusion fallback pet should reset to Lv1");
 };
 
 const expectedTurnOrder = (units: BattleUnit[]): string[] =>
@@ -224,6 +265,7 @@ const assertBossChallengeProgression = (): void => {
 assertCritRange();
 assertElementProfiles();
 assertEnhancementEconomy();
+assertFusionRiskEconomy();
 assertSpeedTurnOrder();
 assertWildEncounterDistanceBands();
 assertEncounterPityCurve();
@@ -239,6 +281,7 @@ console.log(
         "crit",
         "elementProfiles",
         "enhancementEconomy",
+        "fusionRiskEconomy",
         "speedTurnOrder",
         "wildEncounterDistanceBands",
         "encounterPityCurve",

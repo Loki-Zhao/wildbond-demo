@@ -48,7 +48,7 @@ const uiJa: Record<string, string> = {
   deploy: "出撃",
   emptyStorage: "倉庫は空です。",
   starterPrompt: "最初の相棒を選んでください。",
-  fusionHint: "同じ進化段階の Lv10 ペットを2体選択。同属性なら同属性、異属性なら全体プールからランダム。",
+  fusionHint: "同じ進化段階の Lv10 ペットを2体選択。初期体80%、進化体50%で成功し、失敗時は素材2体がLv1の1体になります。",
   canFuse: "合成できます。",
   confirmFusion: "合成する",
   unknown: "未発見",
@@ -139,7 +139,7 @@ export const t = (language: Language, key: string, params: Record<string, string
       deploy: "出战",
       emptyStorage: "仓库为空。",
       starterPrompt: "选择第一位同行伙伴。",
-      fusionHint: "选择两只同阶段 Lv10 宠物。同属性升同属性，不同属性全池随机。",
+      fusionHint: "选择两只同阶段 Lv10 宠物。初始体成功率80%，进化体成功率50%；失败时两只材料会变为其中一只Lv1。",
       canFuse: "可以合成。",
       confirmFusion: "确认合成",
       unknown: "未发现",
@@ -647,11 +647,14 @@ export const translateLog = (language: Language, line: string): string => {
     .replace(/^(.+)被击败。$/, "$1を撃破しました。")
     .replace(/^(.+)分解为分解水晶 x(\d+)。$/, "$1を分解し、分解結晶 x$2 を獲得。")
     .replace(/^(.+)强化到 \+(\d+)。$/, "$1を +$2 に強化しました。")
+    .replace(/^(.+)强化失败，消耗分解水晶 x(\d+)，当前仍为 \+(\d+)。$/, "$1の強化に失敗。分解結晶 x$2 を消費し、現在も +$3 です。")
     .replace(/^只有完全体宠物可以强化。$/, "完全体ペットのみ強化できます。")
     .replace(/^强化已经达到上限。$/, "強化はすでに上限です。")
     .replace(/^分解水晶不足。$/, "分解結晶が足りません。")
     .replace(/^出战中的宠物不可分解。$/, "出撃中のペットは分解できません。")
     .replace(/^合成成功，获得(.+)(.+) Lv1。$/, "合成成功、$1$2 Lv1 を獲得。")
-    .replace(/^合成成功：(.+) Lv1$/, "合成成功：$1 Lv1");
+    .replace(/^合成失败，两只材料消失，留下(.+) Lv1。$/, "合成失敗。素材2体は消え、$1 Lv1 が残りました。")
+    .replace(/^合成成功：(.+) Lv1$/, "合成成功：$1 Lv1")
+    .replace(/^合成失败：留下(.+) Lv1$/, "合成失敗：$1 Lv1 が残りました");
   return text;
 };
