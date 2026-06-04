@@ -502,3 +502,32 @@ https://healthcare-actively-platforms-ranger.trycloudflare.com
 - `scripts/bossBalanceSimulation.ts 80 recommended` 完成；推荐属性队在草原/海岸/峡谷保持可胜，火山/高地仍保留较高难度。
 - `scripts/bossBalanceSimulation.ts 3 search` 完成；五张地图均找到可稳定胜利的混合完全体阵容。
 - 本地预览 `http://127.0.0.1:5173/` 可正常返回页面入口。
+
+## 29. 首领强化挑战 v2.5
+
+已完成：
+
+- 地图操作按钮从“挑战首领”调整为“首领强化挑战”。
+- 普通首领仍通过首次靠近首领点自动触发，避免新玩家找不到首次通关入口。
+- 当前地图普通首领首次通关后，首领强化挑战按钮解锁；强化挑战完成 3 次后进入完成状态并禁用。
+- 新增每张地图独立的 `bossChallengeWins` 存档字段，旧存档会自动补齐为空记录。
+- Boss 战新增 `bossChallengeLevel`，战斗标题和日志显示强化层级。
+- 强化首领倍率设置为：普通首领 1.15，强化 +1 为 1.20，强化 +2 为 1.30，强化 +3 为 1.40。
+- 强化胜利后只更新当前地图强化层级，不影响其它地图的普通首领通关与地图解锁逻辑。
+- 新增 `scripts/bossChallengeSimulation.ts`，用于测试玩家完全体 Lv10 +1/+2/+3 强化队伍挑战对应强化首领的胜率。
+- `scripts/gameplaySystemsRegression.ts` 新增 `bossChallengeProgression`，检查强化层级上限、倍率递增、胜利进度写入和超上限钳制。
+
+平衡观察：
+
+- 推荐克制队在 +1 到 +3 均有可胜空间；火山与高地依旧是压力较高的地图。
+- 混合阵容搜索下，五张地图在 +1 到 +3 均能找到稳定可胜阵容，没有出现“属性相克与技能配合正确也完全打不过”的死局。
+
+已检查：
+
+- `./.tools/bin/npm run build` 通过，生成 JS `index-2e027c60.js`、CSS `index-6b956433.css`。
+- `GITHUB_PAGES=true ./.tools/bin/npm run build` 通过，确认 GitHub Pages 子路径构建正常。
+- `scripts/gameplaySystemsRegression.ts` 回归通过，包含 `bossChallengeProgression`。
+- `scripts/bossDefenseRegression.ts` 回归通过，确认普通 Boss 防御循环旧问题未回归。
+- `scripts/elementMatchupRegression.ts` 回归通过，确认属性相克伤害公式未受强化挑战改动影响。
+- `scripts/bossChallengeSimulation.ts 80 recommended` 完成；玩家 3 只对应强化等级完全体队伍挑战 +1/+2/+3 强化首领均有可胜空间，其中火山与高地保留较高压力。
+- `scripts/bossChallengeSimulation.ts 3 search` 完成；+1 到 +3、五张地图均找到稳定可胜混合阵容。

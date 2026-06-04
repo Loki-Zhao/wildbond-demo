@@ -119,6 +119,7 @@ export interface GameState {
   stepsSinceEncounter: number;
   unlockedMaps: string[];
   defeatedBosses: string[];
+  bossChallengeWins: Partial<Record<string, number>>;
   discoveredSpecies: string[];
   ownedSpecies: string[];
   inventory: Inventory;
@@ -157,6 +158,7 @@ export interface BattleState {
   activeUnitId?: string;
   actedUnitIds: string[];
   log: string[];
+  bossChallengeLevel?: number;
 }
 
 export interface BattleResult {

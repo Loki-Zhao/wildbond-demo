@@ -41,6 +41,7 @@ export const createInitialState = (): GameState => ({
   stepsSinceEncounter: 0,
   unlockedMaps: ["meadow"],
   defeatedBosses: [],
+  bossChallengeWins: {},
   discoveredSpecies: STARTER_SPECIES_IDS,
   ownedSpecies: [],
   inventory: defaultInventory(),

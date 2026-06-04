@@ -288,7 +288,11 @@ export function BattleView({
       <section className="battle-panel">
         <div className="battle-header">
           <div>
-            <h2>{battle.isBoss ? t(language, "bossBattle") : t(language, "wildBattle")}</h2>
+            <h2>
+              {battle.isBoss
+                ? `${t(language, "bossBattle")}${battle.bossChallengeLevel ? ` +${battle.bossChallengeLevel}` : ""}`
+                : t(language, "wildBattle")}
+            </h2>
             <span>{t(language, "round", { round: battle.round })}</span>
           </div>
           <div className="turn-indicator">

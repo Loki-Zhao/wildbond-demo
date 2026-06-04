@@ -11,6 +11,8 @@ interface MapViewProps {
   map: MapDefinition;
   position: { x: number; y: number };
   defeated: boolean;
+  bossChallengeLevel: number;
+  maxBossChallengeLevel: number;
   language: Language;
   onHeal: () => void;
   onReturnHome: () => void;
@@ -25,7 +27,7 @@ const detailVariant = (x: number, y: number, mapId: string): number => {
   return Math.abs((x * 37 + y * 61 + seed) % 5);
 };
 
-export function MapView({ map, position, defeated, language, onHeal, onReturnHome, onBoss }: MapViewProps) {
+export function MapView({ map, position, defeated, bossChallengeLevel, maxBossChallengeLevel, language, onHeal, onReturnHome, onBoss }: MapViewProps) {
   const startX = position.x - Math.floor(viewWidth / 2);
   const startY = position.y - Math.floor(viewHeight / 2);
   const tiles = [];
@@ -90,6 +92,14 @@ export function MapView({ map, position, defeated, language, onHeal, onReturnHom
 
   const nearCamp = distance(position, map.camp) <= 3;
   const nearBoss = distance(position, map.boss) <= 2;
+  const nextBossChallengeLevel = Math.min(maxBossChallengeLevel, bossChallengeLevel + 1);
+  const bossChallengeComplete = bossChallengeLevel >= maxBossChallengeLevel;
+  const bossChallengeDisabled = !nearBoss || !defeated || bossChallengeComplete;
+  const bossChallengeTitle = !defeated
+    ? t(language, "bossChallengeLocked")
+    : bossChallengeComplete
+      ? t(language, "bossChallengeComplete")
+      : t(language, "bossChallengeTitle", { level: nextBossChallengeLevel, max: maxBossChallengeLevel });
 
   return (
     <section className="map-shell" style={{ borderColor: ELEMENT_COLORS[map.element] }}>
@@ -119,9 +129,9 @@ export function MapView({ map, position, defeated, language, onHeal, onReturnHom
           <ShieldPlus size={18} />
           {t(language, "campHeal")}
         </button>
-        <button className="icon-button danger" disabled={!nearBoss || defeated} onClick={onBoss} title={t(language, "challengeBoss")}>
+        <button className="icon-button danger" disabled={bossChallengeDisabled} onClick={onBoss} title={bossChallengeTitle}>
           <Swords size={18} />
-          {t(language, "challengeBoss")}
+          {bossChallengeComplete ? t(language, "bossChallengeComplete") : `${t(language, "challengeBoss")} +${nextBossChallengeLevel}/${maxBossChallengeLevel}`}
         </button>
       </div>
     </section>

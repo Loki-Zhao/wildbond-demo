@@ -21,7 +21,13 @@ import { createPetInstance, markSpecies, syncUnlocks } from "./state";
 import type { BattleResult, BattleState, BattleUnit, EncounterEntry, GameState, GrowthLevel, MapDefinition, PetInstance, Skill } from "./types";
 
 export const BOSS_COMPLETE_STAT_MULTIPLIER = 1.15;
+export const MAX_BOSS_CHALLENGE_LEVEL = 3;
+export const BOSS_CHALLENGE_STAT_MULTIPLIERS = [BOSS_COMPLETE_STAT_MULTIPLIER, 1.2, 1.3, 1.4] as const;
 export const CAPTURE_STONE_DROP_RATE = 0.6;
+
+export const clampBossChallengeLevel = (level?: number): number => Math.max(0, Math.min(MAX_BOSS_CHALLENGE_LEVEL, Math.round(level ?? 0)));
+
+export const bossStatMultiplierForChallenge = (level?: number): number => BOSS_CHALLENGE_STAT_MULTIPLIERS[clampBossChallengeLevel(level)];
 
 const weightedPick = <T extends { weight: number }>(entries: T[]): T => {
   const total = entries.reduce((sum, entry) => sum + entry.weight, 0);
@@ -270,8 +276,9 @@ export const createWildBattle = (state: GameState): BattleState => {
   });
 };
 
-export const createBossBattle = (state: GameState): BattleState => {
+export const createBossBattle = (state: GameState, bossChallengeLevel = 0): BattleState => {
   const map = getMapDefinition(state.activeMapId);
+  const challengeLevel = clampBossChallengeLevel(bossChallengeLevel);
   const completePool = PETS_BY_LEVEL[3].filter((species) => species.element === map.element);
   const bossSpecies = getPetSpecies(map.bossSpeciesId);
   const bossTeam =
@@ -279,7 +286,7 @@ export const createBossBattle = (state: GameState): BattleState => {
       ? [bossSpecies, ...completePool.filter((species) => species.id !== bossSpecies.id)].slice(0, 3)
       : completePool.slice(0, 3);
   const enemies = bossTeam.map((species, index) =>
-    createEnemyUnit(species.id, index, { isBoss: true, level: MAX_PET_LEVEL, statMultiplier: BOSS_COMPLETE_STAT_MULTIPLIER })
+    createEnemyUnit(species.id, index, { isBoss: true, level: MAX_PET_LEVEL, statMultiplier: bossStatMultiplierForChallenge(challengeLevel) })
   );
 
   return withActiveTurn({
@@ -294,7 +301,8 @@ export const createBossBattle = (state: GameState): BattleState => {
     turnOrder: [],
     activeUnitId: undefined,
     actedUnitIds: [],
-    log: [`${map.bossName}挡在祭坛前。`]
+    log: [challengeLevel > 0 ? `首领强化挑战 +${challengeLevel}：${map.bossName}释放更强威压。` : `${map.bossName}挡在祭坛前。`],
+    bossChallengeLevel: challengeLevel
   });
 };
 
@@ -768,10 +776,24 @@ export const finishBattle = (game: GameState, battle: BattleState, options?: { b
   };
 
   if (options?.bossDefeated) {
+    const challengeLevel = clampBossChallengeLevel(battle.bossChallengeLevel);
+    const currentChallengeLevel = Math.max(0, Math.round(nextGame.bossChallengeWins?.[battle.mapId] ?? 0));
     nextGame = {
       ...nextGame,
       defeatedBosses: nextGame.defeatedBosses.includes(battle.mapId) ? nextGame.defeatedBosses : [...nextGame.defeatedBosses, battle.mapId],
-      log: [`${getMapDefinition(battle.mapId).bossName}被击败。`, ...nextGame.log].slice(0, 80)
+      bossChallengeWins:
+        challengeLevel > 0
+          ? {
+              ...nextGame.bossChallengeWins,
+              [battle.mapId]: Math.max(currentChallengeLevel, challengeLevel)
+            }
+          : nextGame.bossChallengeWins,
+      log: [
+        challengeLevel > 0
+          ? `${getMapDefinition(battle.mapId).bossName}强化挑战 +${challengeLevel} 被突破。`
+          : `${getMapDefinition(battle.mapId).bossName}被击败。`,
+        ...nextGame.log
+      ].slice(0, 80)
     };
   }
 

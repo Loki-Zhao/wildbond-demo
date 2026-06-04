@@ -14,13 +14,16 @@ import {
   MAX_PET_LEVEL
 } from "../src/game/balance";
 import {
+  bossStatMultiplierForChallenge,
   CAPTURE_STONE_DROP_RATE,
   advanceBattleTurn,
   createBossBattle,
   createWildBattle,
   defendUnit,
   enemyAct,
+  finishBattle,
   getActiveUnit,
+  MAX_BOSS_CHALLENGE_LEVEL,
   useSkill,
   wildEncounterCandidatesForPosition,
   wildEncounterProfileForPosition
@@ -191,6 +194,33 @@ const assertElementSkillKits = (): void => {
   assert(nextAlly?.ap === ally.ap, "0AP basic attack should not spend AP");
 };
 
+const assertBossChallengeProgression = (): void => {
+  const normal = bossStatMultiplierForChallenge(0);
+  const first = bossStatMultiplierForChallenge(1);
+  const second = bossStatMultiplierForChallenge(2);
+  const third = bossStatMultiplierForChallenge(3);
+
+  assert(MAX_BOSS_CHALLENGE_LEVEL === 3, "boss challenge should cap at three clears");
+  assert(normal < first && first < second && second < third, "boss challenge multipliers should increase by level");
+  assert(bossStatMultiplierForChallenge(99) === third, "boss challenge should clamp above max level");
+
+  const state = {
+    ...createInitialState(),
+    activeMapId: MAPS[0].id,
+    party: ["flame-crown-drake", "scorch-phoenix", "volcano-rhino"].map((speciesId) => createPetInstance(speciesId, MAX_PET_LEVEL))
+  };
+  const battle = createBossBattle(state, 2);
+  assert(battle.bossChallengeLevel === 2, "enhanced boss battle should record challenge level");
+  assert(battle.enemies.every((enemy) => enemy.statMultiplier === second), "enhanced boss units should use challenge multiplier");
+
+  const finished = finishBattle(state, battle, { bossDefeated: true });
+  assert(finished.defeatedBosses.includes(MAPS[0].id), "enhanced boss victory should still count as boss defeated");
+  assert(finished.bossChallengeWins[MAPS[0].id] === 2, "enhanced boss victory should save map challenge progress");
+
+  const clampedBattle = createBossBattle(state, 99);
+  assert(clampedBattle.bossChallengeLevel === MAX_BOSS_CHALLENGE_LEVEL, "boss challenge battle should clamp requested level");
+};
+
 assertCritRange();
 assertElementProfiles();
 assertEnhancementEconomy();
@@ -199,6 +229,7 @@ assertWildEncounterDistanceBands();
 assertEncounterPityCurve();
 assertStarterAndRewardTuning();
 assertElementSkillKits();
+assertBossChallengeProgression();
 
 console.log(
   JSON.stringify(
@@ -212,7 +243,8 @@ console.log(
         "wildEncounterDistanceBands",
         "encounterPityCurve",
         "starterAndRewardTuning",
-        "elementSkillKits"
+        "elementSkillKits",
+        "bossChallengeProgression"
       ]
     },
     null,

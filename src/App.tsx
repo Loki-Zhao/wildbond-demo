@@ -46,6 +46,7 @@ import {
   defendUnit,
   enemyAct,
   finishBattle,
+  MAX_BOSS_CHALLENGE_LEVEL,
   tryCapture,
   useSkill
 } from "./game/combat";
@@ -249,6 +250,7 @@ export function App() {
 
   const activeMap = getMapDefinition(game.activeMapId);
   const defeatedCurrentBoss = game.defeatedBosses.includes(game.activeMapId);
+  const currentBossChallengeLevel = Math.max(0, Math.min(MAX_BOSS_CHALLENGE_LEVEL, Math.round(game.bossChallengeWins?.[game.activeMapId] ?? 0)));
 
   useEffect(() => {
     saveGame(game);
@@ -608,10 +610,15 @@ export function App() {
             map={activeMap}
             position={game.position}
             defeated={defeatedCurrentBoss}
+            bossChallengeLevel={currentBossChallengeLevel}
+            maxBossChallengeLevel={MAX_BOSS_CHALLENGE_LEVEL}
             language={language}
             onHeal={() => setGame((current) => healParty(current))}
             onReturnHome={returnHome}
-            onBoss={() => startBattle(createBossBattle(game))}
+            onBoss={() => {
+              if (!defeatedCurrentBoss || currentBossChallengeLevel >= MAX_BOSS_CHALLENGE_LEVEL) return;
+              startBattle(createBossBattle(game, currentBossChallengeLevel + 1));
+            }}
           />
 
           <div className="dpad">

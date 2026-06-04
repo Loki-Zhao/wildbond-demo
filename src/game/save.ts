@@ -44,6 +44,12 @@ export const loadGame = (): GameState => {
       },
       party: normalizePets(parsed.party),
       storage: normalizePets(parsed.storage),
+      bossChallengeWins:
+        parsed.bossChallengeWins && typeof parsed.bossChallengeWins === "object"
+          ? Object.fromEntries(
+              Object.entries(parsed.bossChallengeWins).map(([mapId, value]) => [mapId, Math.max(0, Math.min(3, Math.round(Number(value) || 0)))])
+            )
+          : initial.bossChallengeWins,
       stepsSinceEncounter: Math.max(0, Math.round(parsed.stepsSinceEncounter ?? initial.stepsSinceEncounter)),
       log: parsed.log?.length ? parsed.log : ["读取了本地进度。"]
     });
