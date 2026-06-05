@@ -9,6 +9,7 @@ import { ShortcutHint } from "./components/ShortcutHint";
 import { useSkillInfo } from "./components/SkillInfo";
 import { MAPS, getMapDefinition } from "./data/maps";
 import { PETS, STARTER_SPECIES_IDS, getPetSpecies } from "./data/pets";
+import { STARTER_ARTWORK } from "./data/starterArtwork";
 import { getSkill } from "./data/skills";
 import {
   ELEMENT_COLORS,
@@ -157,7 +158,9 @@ function StarterOverlay({ language, onChoose }: { language: Language; onChoose: 
             const species = getPetSpecies(speciesId);
             return (
               <button className="starter-card" key={species.id} onClick={() => onChoose(species.id)}>
-                <PixelPetSprite speciesId={species.id} element={species.element} growthLevel={species.growthLevel} size="large" active />
+                <span className="starter-art-frame" aria-hidden="true">
+                  <img className="starter-art" src={STARTER_ARTWORK[species.id]} alt="" draggable={false} />
+                </span>
                 <strong>{petName(language, species.id, species.name)}</strong>
                 <small>
                   {elementLabel(language, species.element)} · Lv3 · {roleText(language, species.role)}
