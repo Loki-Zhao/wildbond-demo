@@ -1684,6 +1684,27 @@ button {
   height: var(--p);
 }
 
+.pet-art-sprite {
+  position: relative;
+  display: inline-block;
+  overflow: visible;
+  image-rendering: auto;
+}
+
+.pet-art-image {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center bottom;
+  image-rendering: auto;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
 .pixel-pet.sprite-active {
   animation: sprite-bob 780ms steps(2) infinite;
 }

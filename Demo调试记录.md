@@ -794,3 +794,24 @@ https://healthcare-actively-platforms-ranger.trycloudflare.com
 - `./.tools/bin/node scripts/pixelAssetAudit.mjs` 通过：64×64 原生像素资源与最近邻显示链路未回退。
 - `scripts/gameplaySystemsRegression.ts`、`scripts/fusionValidation.ts`、`scripts/bossDefenseRegression.ts` 与 `scripts/elementMatchupRegression.ts` 均通过。
 - `./.tools/bin/npm run build` 通过。
+
+## 40. 火系部分宠物 512x512 透明美术接入 v3.7
+
+已完成：
+
+- 更新美术资源规范：新版宠物模型允许直接使用 `512×512 RGBA PNG`，地图、人物、UI 与未替换宠物继续沿用原生 `64×64` 像素链路。
+- 接入五只火系新版宠物模型：火花蜥、炭鼻猪、灯尾狐、赤羽鸡与火绒鹿。
+- 新版宠物使用 `object-fit: contain` 与底部中央锚点，根据队伍、仓库、图鉴和战斗位置等比例显示为 `64×64` 或 `128×128`。
+- 新版宠物图片使用浏览器高质量缩放，透明边缘与原始细节保留；现有程序化像素资源仍使用最近邻显示。
+- 视觉资源仅根据宠物内部 ID 替换，不修改宠物属性、技能、捕获、攻击、升级、合成或存档逻辑。
+- 新增 `scripts/petArtworkRuntimeQa.mjs`，覆盖桌面与手机的队伍、仓库、图鉴、图鉴详情、战斗敌我显示、攻击命中和捕获石消耗。
+- 新增 `美术资源规范.md`，记录后续新版宠物资源交付要求。
+
+已检查：
+
+- 五张资源均为真实透明背景的 `512×512 RGBA PNG`。
+- `scripts/petArtworkRuntimeQa.mjs` 通过：桌面与手机均正确加载五张资源；战斗中敌我双方新版宠物可显示，攻击会减少敌方 HP，捕获操作会消耗捕获石。
+- `scripts/responsiveViewportQa.mjs` 通过：PC、手机横屏与手机竖屏布局均无回退。
+- `scripts/pixelAssetAudit.mjs` 通过：地图、人物、UI 与现有程序化像素资源链路未回退。
+- `scripts/authoredSpriteAudit.mjs` 与 `scripts/crossElementSpriteAudit.mjs` 通过。
+- 本地构建与 GitHub Pages 子路径构建通过。

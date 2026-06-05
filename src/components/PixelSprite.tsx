@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import { getEarthPetPixelArt } from "../data/earthPetPixelArt";
 import { getFirePetPixelArt } from "../data/firePetPixelArt";
 import { getForestPetPixelArt } from "../data/forestPetPixelArt";
+import { PET_ARTWORK } from "../data/petArtwork";
 import { PET_SPRITE_DESIGNS, type PetSpriteDesign, type SpriteBase, type SpriteFeature } from "../data/petSpriteDesigns";
 import { getWaterPetPixelArt } from "../data/waterPetPixelArt";
 import { getWindPetPixelArt } from "../data/windPetPixelArt";
@@ -1010,6 +1011,17 @@ interface PixelPetSpriteProps {
 }
 
 export function PixelPetSprite({ speciesId, element, growthLevel, size = "medium", fainted, active }: PixelPetSpriteProps) {
+  const artwork = PET_ARTWORK[speciesId];
+  const spriteClassName = `pixel-sprite pixel-pet pixel-${size} ${fainted ? "fainted" : ""} ${active ? "sprite-active" : ""}`;
+
+  if (artwork) {
+    return (
+      <span className={`${spriteClassName} pet-art-sprite`} aria-hidden="true">
+        <img className="pet-art-image" src={artwork} alt="" draggable={false} />
+      </span>
+    );
+  }
+
   const authoredArt =
     getWindPetPixelArt(speciesId) ??
     getEarthPetPixelArt(speciesId) ??
@@ -1040,7 +1052,7 @@ export function PixelPetSprite({ speciesId, element, growthLevel, size = "medium
 
   return (
     <span
-      className={`pixel-sprite pixel-pet pixel-${size} ${fainted ? "fainted" : ""} ${active ? "sprite-active" : ""}`}
+      className={spriteClassName}
       aria-hidden="true"
       style={
         {
