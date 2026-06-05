@@ -607,6 +607,50 @@ https://healthcare-actively-platforms-ranger.trycloudflare.com
 - `scripts/bossDefenseRegression.ts` 回归通过。
 - `scripts/elementMatchupRegression.ts` 回归通过。
 
+## 35. 森系 10 只宠物超采样像素重设计 v3.2
+
+已完成：
+
+- 仅重设计森系 10 只宠物，水、火、土、风系暂不修改。
+- 新增 `src/data/forestPetPixelArt.ts`：每只宠物最终均为独立的静态 `64×64` 二维颜色索引数组与独立调色板，不再进入共享身体模板绘制流程。
+- `scripts/authorForestPetSprites.mjs` 改为超采样烘焙：每只先用独立平滑曲线在 `256×256` 绘制，再开启 Canvas 高质量平滑降采样到 `64×64`。
+- 降采样后吸附到每只独立 23 色调色板，执行孤立噪点清理，并在原生 `64×64` 层重新绘制眼睛、瞳孔、左上高光点与嘴部。
+- 每只最终实际使用 18～23 色；描线包含普通深色、右下加深与两档半透明外缘过渡，材质交界加入中间色。
+- 10 只剪影分别为低伏叶耳鼠、宽扁苔龟、修长花鹿、竖立藤尾猴、四足藤甲熊、斜向蜜芽狐、潜行荆棘豹、高耸古木鹿王、展翼翠冠鹰、正面树冠巨熊。
+- `PixelPetSprite` 优先读取森系静态像素数据；其余属性继续使用旧流程，等待后续分批重做。
+- 新增 `scripts/authorForestPetSprites.mjs`、`scripts/forestSpriteAudit.mjs`、`scripts/renderForestSpritePreview.mjs`，用于超采样烘焙、结构审计和最近邻预览。
+- 详细设计清单与自检记录保存在 `森系宠物64x64重设计.md`。
+
+已检查：
+
+- `./.tools/bin/node scripts/forestSpriteAudit.mjs` 通过：10/10 均输出为 `64×64`，每只实际使用 18～23 色，无重复填充掩码。
+- 每只外缘具有 88～172 个抗锯齿像素，材质交界具有 231～384 个过渡色像素。
+- 最高填充掩码 IoU 为 `0.655`，低于审计阈值 `0.72`。
+- `./.tools/bin/npm run build` 通过。
+
+## 36. 水系 10 只宠物超采样像素重设计 v3.3
+
+已完成：
+
+- 在森系确认方向的基础上，仅重设计水系 10 只宠物；火、土、风系暂不修改。
+- 新增 `src/data/waterPetPixelArt.ts`：每只宠物最终均为独立的静态 `64×64` 二维颜色索引数组与独立调色板。
+- 新增 `scripts/authorWaterPetSprites.mjs`：每只先用独立平滑曲线在 `256×256` 绘制，再开启 Canvas 高质量平滑降采样到 `64×64`。
+- 降采样后吸附到每只独立 23 色调色板，执行孤立像素清理，并在原生 `64×64` 层重绘眼睛、瞳孔、左上高光点与嘴部。
+- 10 只剪影分别为跃动泡泡海豚、不对称巨钳潮蟹、鳍耳水兔、正面雾蛙、珊瑚海龟、溪流疾跃猫、贝刃战獭、冰晶巨鲸、盘旋深潮蛟和侧身月湾鲛。
+- `PixelPetSprite` 现在优先读取森系或水系静态像素数据；其余属性继续使用旧流程，等待后续分批重做。
+- 新增 `scripts/waterSpriteAudit.mjs`、`scripts/renderWaterSpritePreview.mjs`，用于水系结构审计和最近邻预览。
+- 详细设计清单与自检记录保存在 `水系宠物64x64重设计.md`。
+
+已检查：
+
+- `./.tools/bin/node scripts/waterSpriteAudit.mjs` 通过：10/10 均输出为 `64×64`，每只实际使用 21～23 色，无重复填充掩码。
+- 每只外缘具有 85～165 个抗锯齿像素，材质交界具有 215～478 个过渡色像素。
+- 最高填充掩码 IoU 为 `0.703`，低于审计阈值 `0.72`。
+- `./.tools/bin/node scripts/waterSpriteRuntimeQa.mjs http://127.0.0.1:5173/` 通过：泡泡豚在 PC 端以 `128×128` 整数倍显示、手机端以原生 `64×64` 显示；两端均保留 `4096` 个像素单元和 22 个可见颜色。
+- `./.tools/bin/node scripts/responsiveViewportQa.mjs http://127.0.0.1:5173/` 通过：PC、手机横屏与手机竖屏布局均无回退。
+- `./.tools/bin/node scripts/mobileMapTapQa.mjs http://127.0.0.1:5173/` 通过：手机触摸地图移动仍正常。
+- `./.tools/bin/npm run build` 通过。
+
 ## 34. 手机端滚动菜单、触摸地图移动与按钮文字 v3.0
 
 已定位问题：
@@ -677,3 +721,76 @@ https://healthcare-actively-platforms-ranger.trycloudflare.com
 - `scripts/fusionValidation.ts` 验证通过。
 - `scripts/bossDefenseRegression.ts` 回归通过。
 - `scripts/elementMatchupRegression.ts` 回归通过。
+
+## 37. 火系 10 只宠物超采样像素重设计 v3.4
+
+已完成：
+
+- 在森系与水系确认方向的基础上，仅重设计火系 10 只宠物；土、风系暂不修改。
+- 新增 `src/data/firePetPixelArt.ts`：每只宠物最终均为独立的静态 `64×64` 二维颜色索引数组与独立调色板。
+- 新增 `scripts/authorFirePetSprites.mjs`：每只先用独立平滑曲线在 `256×256` 绘制，再开启 Canvas 高质量平滑降采样到 `64×64`。
+- 降采样后吸附到每只独立 23 色调色板，执行孤立像素清理，并在原生 `64×64` 层重绘眼睛、瞳孔、左上高光点与嘴部。
+- 10 只剪影分别为贴地火花蜥、短高炭鼻猪、悬灯尾火狐、前倾赤羽鸡、熔岩丘巨龟、冲刺烈牙豹、火炬角长腿鹿、半展翼炎冠龙、低头冲锋火山巨犀和正面展翼灼翼凰。
+- 根据审计结果返修火花蜥、炭鼻猪与火山巨犀，解决其与烈牙豹、熔甲龟之间的轮廓接近问题。
+- `PixelPetSprite` 现在优先读取火、森、水系静态像素数据；土、风系继续使用旧流程，等待后续分批重做。
+- 新增通用 `scripts/authoredSpriteAudit.mjs`、`scripts/renderAuthoredSpritePreview.mjs` 和 `scripts/authoredSpriteRuntimeQa.mjs`，用于后续各属性静态精灵审计、最近邻预览和实际游戏显示检查。
+- 详细设计清单与自检记录保存在 `火系宠物64x64重设计.md`。
+
+已检查：
+
+- `./.tools/bin/node scripts/authoredSpriteAudit.mjs fire` 通过：10/10 均输出为 `64×64`，每只实际使用 20～23 色，无重复填充掩码。
+- 每只外缘具有 57～135 个抗锯齿像素，材质交界具有 217～479 个过渡色像素。
+- 最高填充掩码 IoU 为 `0.677`，低于审计阈值 `0.72`。
+- `./.tools/bin/node scripts/authoredSpriteRuntimeQa.mjs http://127.0.0.1:5173/ 火花蜥 fire` 通过：火花蜥在 PC 端以 `128×128` 整数倍显示、手机端以原生 `64×64` 显示；两端均保留 `4096` 个像素单元和 20 个可见颜色。
+- `./.tools/bin/node scripts/responsiveViewportQa.mjs http://127.0.0.1:5173/` 通过：PC、手机横屏与手机竖屏布局均无回退。
+- `./.tools/bin/node scripts/mobileMapTapQa.mjs http://127.0.0.1:5173/` 通过：手机触摸地图移动仍正常。
+- `./.tools/bin/node scripts/pixelAssetAudit.mjs` 通过：64×64 原生像素资源与最近邻显示链路未回退。
+- `./.tools/bin/npm run build` 通过。
+
+## 38. 土系 10 只宠物跨属性避重设计 v3.5
+
+已完成：
+
+- 在森、水、火系确认版本基础上，重设计土系 10 只宠物，并重点处理不同属性间的外形趋同问题。
+- 新增 `src/data/earthPetPixelArt.ts`：每只宠物最终均为独立静态 `64×64` 二维颜色索引数组与独立调色板。
+- 新增 `scripts/authorEarthPetSprites.mjs`：每只先用独立平滑曲线在 `256×256` 绘制，再开启 Canvas 高质量平滑降采样到 `64×64`。
+- 土系剪影分别为直立石牙跳鼠、半出土铲吻蜥、空心螺旋角羊、正面铜甲虫、正面巨角牛、端坐砂纹猫、持盾石猿、柱腿移动台地巨龟、正面扑落陨石狮和浮石古岩魔像。
+- 山脊巨龟取消圆拱龟壳，改为平顶峡谷与四根石柱长腿；圆岩羊的螺旋角使用真实透明负空间；土系不设计鸟类。
+- 新增 `scripts/crossElementSpriteAudit.mjs`，将目标属性与已完成属性逐一比较填充掩码，防止跨属性宠物只换颜色或轻微配件。
+- 根据跨属性审计结果返修圆岩羊、铜壳虫和石盾猿，拆解过满占位并强化负空间。
+- `PixelPetSprite` 现在优先读取土、火、森、水系静态像素数据；风系继续使用旧流程，等待下一批重做。
+- 详细设计清单与避重说明保存在 `土系宠物64x64重设计.md`。
+
+已检查：
+
+- `./.tools/bin/node scripts/authoredSpriteAudit.mjs earth` 通过：10/10 均输出为 `64×64`，每只实际使用 20～23 色，无重复填充掩码。
+- 土系内部最高填充掩码 IoU 为 `0.639`，低于内部审计阈值 `0.72`。
+- `./.tools/bin/node scripts/crossElementSpriteAudit.mjs earth forest,water,fire 0.70` 通过：土系与现有森、水、火 30 只逐一比较，最高 IoU 为 `0.691`，低于跨属性阈值 `0.70`。
+- `./.tools/bin/node scripts/authoredSpriteRuntimeQa.mjs http://127.0.0.1:5173/ 圆岩羊 earth` 通过：圆岩羊在 PC 端以 `128×128` 整数倍显示、手机端以原生 `64×64` 显示；两端均保留 `4096` 个像素单元和 21 个可见颜色。
+- `./.tools/bin/node scripts/responsiveViewportQa.mjs http://127.0.0.1:5173/` 通过：PC、手机横屏与手机竖屏布局均无回退。
+- `./.tools/bin/node scripts/mobileMapTapQa.mjs http://127.0.0.1:5173/` 通过：手机触摸地图移动仍正常。
+- `./.tools/bin/node scripts/pixelAssetAudit.mjs` 通过：64×64 原生像素资源与最近邻显示链路未回退。
+- `./.tools/bin/npm run build` 通过。
+
+## 39. 风系 10 只宠物与完整 50 只美术接入 v3.6
+
+已完成：
+
+- 按土系跨属性避重标准完成最后一批风系 10 只宠物，并将森、水、火、土、风共 50 只独立静态像素设计全部接入游戏。
+- 新增 `src/data/windPetPixelArt.ts` 与 `scripts/authorWindPetSprites.mjs`，每只风系宠物均由独立 `256×256` 平滑路径烘焙到原生 `64×64` 静态像素数据。
+- 风系剪影分别为悬挂风铃雀、斜向阶梯云尾兔、俯视旋翼蜓、降落伞轻羽猫、龙卷岚翼狼、蜷卧羽环鹿、S 形疾风鼬、收翼雷矛鹫、踏云环形麒麟和单侧弯月风暴狮鹫。
+- 根据跨属性审计结果彻底返修云尾兔与风暴狮鹫，移除与圆岩羊、龟壳、岩角牛相近的圆环和正面对称占位。
+- `PixelPetSprite` 现在优先读取五种属性全部 50 只静态 `64×64` 像素数据；旧共享身体模板仅保留为未知 ID 回退。
+- 详细设计清单与避重说明保存在 `风系宠物64x64重设计.md`。
+
+已检查：
+
+- `./.tools/bin/node scripts/authoredSpriteAudit.mjs wind` 通过：10/10 均输出为 `64×64`，每只实际使用 21～23 色，无重复填充掩码。
+- 风系内部最高填充掩码 IoU 为 `0.689`，低于内部审计阈值 `0.72`。
+- `./.tools/bin/node scripts/crossElementSpriteAudit.mjs wind forest,water,fire,earth 0.70` 通过：风系与现有四系 40 只逐一比较，最高 IoU 为 `0.696`，低于跨属性阈值 `0.70`。
+- `./.tools/bin/node scripts/authoredSpriteRuntimeQa.mjs http://127.0.0.1:5173/ 风铃雀 wind` 通过：风铃雀在 PC 端以 `128×128` 整数倍显示、手机端以原生 `64×64` 显示；两端均保留 `4096` 个像素单元和 22 个可见颜色。
+- `./.tools/bin/node scripts/responsiveViewportQa.mjs http://127.0.0.1:5173/` 通过：PC、手机横屏与手机竖屏布局均无回退。
+- `./.tools/bin/node scripts/mobileMapTapQa.mjs http://127.0.0.1:5173/` 通过：手机触摸地图移动仍正常。
+- `./.tools/bin/node scripts/pixelAssetAudit.mjs` 通过：64×64 原生像素资源与最近邻显示链路未回退。
+- `scripts/gameplaySystemsRegression.ts`、`scripts/fusionValidation.ts`、`scripts/bossDefenseRegression.ts` 与 `scripts/elementMatchupRegression.ts` 均通过。
+- `./.tools/bin/npm run build` 通过。

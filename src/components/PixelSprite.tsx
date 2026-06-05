@@ -1,5 +1,10 @@
 import type { CSSProperties } from "react";
+import { getEarthPetPixelArt } from "../data/earthPetPixelArt";
+import { getFirePetPixelArt } from "../data/firePetPixelArt";
+import { getForestPetPixelArt } from "../data/forestPetPixelArt";
 import { PET_SPRITE_DESIGNS, type PetSpriteDesign, type SpriteBase, type SpriteFeature } from "../data/petSpriteDesigns";
+import { getWaterPetPixelArt } from "../data/waterPetPixelArt";
+import { getWindPetPixelArt } from "../data/windPetPixelArt";
 import { ELEMENT_COLORS } from "../game/balance";
 import type { ElementType, GrowthLevel } from "../game/types";
 
@@ -1005,7 +1010,13 @@ interface PixelPetSpriteProps {
 }
 
 export function PixelPetSprite({ speciesId, element, growthLevel, size = "medium", fainted, active }: PixelPetSpriteProps) {
-  const colors: Record<PixelKey, string> = {
+  const authoredArt =
+    getWindPetPixelArt(speciesId) ??
+    getEarthPetPixelArt(speciesId) ??
+    getFirePetPixelArt(speciesId) ??
+    getForestPetPixelArt(speciesId) ??
+    getWaterPetPixelArt(speciesId);
+  const fallbackColors: Record<PixelKey, string> = {
     empty: "transparent",
     outline: "#17211f",
     body: ELEMENT_COLORS[element],
@@ -1017,6 +1028,15 @@ export function PixelPetSprite({ speciesId, element, growthLevel, size = "medium
     white: "#fff8dc",
     shadow: "rgba(23, 33, 31, 0.38)"
   };
+  const colors: Record<string, string> = authoredArt
+    ? {
+        ".": "transparent",
+        ...Object.fromEntries(Object.entries(authoredArt.palette).map(([key, entry]) => [key, entry.color]))
+      }
+    : fallbackColors;
+  const pixelRows = authoredArt ? authoredArt.pixels : drawPetPixels(speciesId, element, growthLevel);
+  const bodyColor = authoredArt?.palette.m?.color ?? ELEMENT_COLORS[element];
+  const accentColor = authoredArt?.palette.f?.color ?? elementAccent[element];
 
   return (
     <span
@@ -1026,12 +1046,12 @@ export function PixelPetSprite({ speciesId, element, growthLevel, size = "medium
         {
           "--sprite-columns": SPRITE_SIZE,
           "--sprite-rows": SPRITE_SIZE,
-          "--sprite-body": ELEMENT_COLORS[element],
-          "--sprite-accent": elementAccent[element]
+          "--sprite-body": bodyColor,
+          "--sprite-accent": accentColor
         } as CSSProperties
       }
     >
-      {drawPetPixels(speciesId, element, growthLevel).flatMap((row, y) =>
+      {pixelRows.flatMap((row, y) =>
         row.map((cell, x) => <span className="pixel" key={`${x}-${y}`} style={{ backgroundColor: colors[cell] }} />)
       )}
     </span>
