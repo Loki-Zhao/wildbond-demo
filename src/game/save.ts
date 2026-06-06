@@ -1,5 +1,5 @@
 import { createInitialState, syncUnlocks } from "./state";
-import { clampEnhanceLevel, clampPetLevel, getMaxHp, MAX_PET_LEVEL } from "./balance";
+import { clampEnhanceLevel, clampPetLevel, clampRarity, getMaxHp, MAX_PET_LEVEL } from "./balance";
 import type { GameState, PetInstance } from "./types";
 
 const SAVE_KEY = "wildbond-demo-save-v1";
@@ -7,11 +7,13 @@ const SAVE_KEY = "wildbond-demo-save-v1";
 const normalizePet = (pet: PetInstance): PetInstance | null => {
   try {
     const level = clampPetLevel(pet.expLevel ?? 1);
+    const rarity = clampRarity(pet.rarity);
     const enhanceLevel = clampEnhanceLevel(pet.enhanceLevel);
-    const maxHp = getMaxHp({ ...pet, expLevel: level, enhanceLevel });
+    const maxHp = getMaxHp({ ...pet, expLevel: level, rarity, enhanceLevel });
     return {
       ...pet,
       expLevel: level,
+      rarity,
       enhanceLevel,
       exp: level >= MAX_PET_LEVEL ? 0 : Math.max(0, Math.round(pet.exp ?? 0)),
       currentHp: Math.max(0, Math.min(maxHp, Math.round(pet.currentHp ?? maxHp)))

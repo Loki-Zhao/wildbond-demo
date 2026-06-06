@@ -559,7 +559,8 @@ button:disabled {
 .skill-list span,
 .status-row span,
 .boss-tag,
-.acted-tag {
+.acted-tag,
+.rarity-tag {
   display: inline-flex;
   align-items: center;
   min-height: 24px;
@@ -1013,7 +1014,8 @@ button:disabled {
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  image-rendering: auto;
   user-select: none;
   -webkit-user-drag: none;
 }
@@ -2859,8 +2861,8 @@ button {
 }
 
 .combatant-title {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 5px;
   min-width: 0;
@@ -2907,6 +2909,22 @@ button {
   background: #c7c1b0;
   color: #3f4744;
   white-space: nowrap;
+}
+
+.rarity-tag {
+  background: #e6dfc8;
+  color: #3c4742;
+  white-space: nowrap;
+}
+
+.rarity-rare {
+  background: #ffe1a4;
+  color: #7a4216;
+}
+
+.rarity-weak {
+  background: #d8ddd5;
+  color: #59615e;
 }
 
 .combatant-slot.selected .combatant-platform {

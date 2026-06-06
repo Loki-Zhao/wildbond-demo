@@ -1,6 +1,6 @@
 import { PETS } from "./data/pets";
 import { SKILLS } from "./data/skills";
-import type { ElementType, GrowthLevel, Skill, StatusId } from "./game/types";
+import type { ElementType, GrowthLevel, PetRarity, Skill, StatusId } from "./game/types";
 
 export type Language = "zh" | "ja";
 
@@ -48,14 +48,14 @@ const uiJa: Record<string, string> = {
   deploy: "出撃",
   emptyStorage: "倉庫は空です。",
   starterPrompt: "最初の相棒を選んでください。",
-  fusionHint: "同じ進化段階の Lv10 ペットを2体選択。初期体80%、進化体50%で成功し、失敗時は素材2体がLv1の1体になります。",
+  fusionHint: "同じ段階の Lv10 ペットを2体選択。初級80%、中級50%、高級から神獣30%で成功します。",
   canFuse: "合成できます。",
   confirmFusion: "合成する",
   unknown: "未発見",
   unknownEcology: "未知の生態",
   ownedProgress: "発見",
-  initialFusion: "初期体合成",
-  evolvedFusion: "進化体合成",
+  initialFusion: "初級合成",
+  evolvedFusion: "中級合成",
   done: "完了",
   notDone: "未完了",
   bossDefeated: "首領撃破済み",
@@ -107,9 +107,9 @@ const uiJa: Record<string, string> = {
   elementDomain: "{element}域",
   unlockedMeadow: "初期開放",
   unlockedCoast: "青芽草原の首領を撃破",
-  unlockedVolcano: "初期体合成を1回完了",
+  unlockedVolcano: "初級合成を1回完了",
   unlockedCanyon: "潮汐海岸と赤砂火山の首領を撃破",
-  unlockedHighland: "進化体合成を1回完了し岩牙峡谷の首領を撃破"
+  unlockedHighland: "中級合成を1回完了し岩牙峡谷の首領を撃破"
 };
 
 export const t = (language: Language, key: string, params: Record<string, string | number> = {}): string => {
@@ -139,14 +139,14 @@ export const t = (language: Language, key: string, params: Record<string, string
       deploy: "出战",
       emptyStorage: "仓库为空。",
       starterPrompt: "选择第一位同行伙伴。",
-      fusionHint: "选择两只同阶段 Lv10 宠物。初始体成功率80%，进化体成功率50%；失败时两只材料会变为其中一只Lv1。",
+      fusionHint: "选择两只同阶段 Lv10 宠物。初级80%，中级50%，高级合成神兽30%；失败时两只材料会变为其中一只Lv1。",
       canFuse: "可以合成。",
       confirmFusion: "确认合成",
       unknown: "未发现",
       unknownEcology: "未知生态",
       ownedProgress: "已发现",
-      initialFusion: "初始体合成",
-      evolvedFusion: "进化体合成",
+      initialFusion: "初级合成",
+      evolvedFusion: "中级合成",
       done: "完成",
       notDone: "未完成",
       bossDefeated: "首领已击败",
@@ -198,9 +198,9 @@ export const t = (language: Language, key: string, params: Record<string, string
       elementDomain: "{element}域",
       unlockedMeadow: "初始开放",
       unlockedCoast: "击败青芽草原首领",
-      unlockedVolcano: "完成一次初始体合成",
+      unlockedVolcano: "完成一次初级合成",
       unlockedCanyon: "击败潮汐海岸与赤砂火山首领",
-      unlockedHighland: "完成一次进化体合成并击败岩牙峡谷首领"
+      unlockedHighland: "完成一次中级合成并击败岩牙峡谷首领"
     };
     return format(zh[key] ?? key, params);
   }
@@ -221,9 +221,10 @@ const elementJa: Record<ElementType, string> = {
 };
 
 const growthJa: Record<GrowthLevel, string> = {
-  1: "初期体",
-  2: "進化体",
-  3: "完全体"
+  1: "初級",
+  2: "中級",
+  3: "高級",
+  4: "神獣"
 };
 
 const statusJa: Record<StatusId, string> = {
@@ -247,64 +248,64 @@ const mapJa: Record<string, string> = {
 };
 
 const bossJa: Record<string, string> = {
-  meadow: "古木鹿王の幻影",
-  coast: "深潮蛟の幻影",
-  volcano: "火山巨犀の幻影",
-  canyon: "古岩魔像の幻影",
-  highland: "風暴獅鷲の幻影"
+  meadow: "森環神鹿の幻影",
+  coast: "滄瀾海竜の幻影",
+  volcano: "赤焔神凰の幻影",
+  canyon: "玄岩神将の幻影",
+  highland: "天嵐神竜の幻影"
 };
 
 const petJa: Record<string, string> = {
-  "fire-lizard": "火花トカゲ",
-  "coal-pig": "炭鼻ブタ",
-  "lamp-fox": "灯尾キツネ",
-  "red-rooster": "赤羽ニワトリ",
-  "magma-turtle": "熔甲カメ",
-  "blaze-panther": "烈牙ヒョウ",
-  "tinder-deer": "火綿シカ",
-  "flame-crown-drake": "炎冠竜",
-  "volcano-rhino": "火山巨犀",
-  "scorch-phoenix": "灼翼凰",
-  "bubble-dolphin": "泡泡イルカ",
-  "tide-crab": "潮殻カニ",
-  "bluefin-rabbit": "青ヒレウサギ",
-  "mist-frog": "霧眼カエル",
-  "coral-turtle": "珊瑚カメ",
-  "brook-cat": "渓影ネコ",
-  "wave-otter": "浪牙カワウソ",
-  "crystal-whale": "海晶クジラ",
-  "deep-tide-jiao": "深潮蛟",
-  "moon-bay-mer": "月湾マーメル",
-  "grass-mouse": "草団ネズミ",
-  "moss-turtle": "苔背カメ",
-  "flower-deer": "花耳シカ",
-  "leaf-monkey": "葉尾サル",
-  "vine-bear": "藤甲クマ",
-  "honeybud-fox": "蜜芽キツネ",
-  "thorn-panther": "荊棘ヒョウ",
-  "ancient-stag": "古木鹿王",
-  "jade-eagle": "翠冠ワシ",
-  "forest-giant-bear": "森霊巨熊",
-  "stone-rat": "石牙ネズミ",
-  "sand-lizard": "砂背トカゲ",
-  "round-rock-sheep": "丸岩ヒツジ",
-  "copper-bug": "銅殻ムシ",
-  "rock-horn-bull": "岩角ウシ",
-  "sand-pattern-cat": "砂紋ネコ",
-  "stone-shield-ape": "石盾サル",
-  "ridge-giant-turtle": "山脊巨亀",
-  "meteor-lion": "隕石ライオン",
-  "ancient-golem": "古岩ゴーレム",
-  "wind-chime-sparrow": "風鈴スズメ",
-  "cloud-rabbit": "雲尾ウサギ",
-  "spin-dragonfly": "旋葉トンボ",
-  "light-feather-cat": "軽羽ネコ",
-  "gale-wolf": "嵐翼オオカミ",
-  "white-feather-deer": "白羽シカ",
-  "swift-weasel": "疾風イタチ",
-  "sky-thunder-vulture": "天鳴ハゲワシ",
-  "cloud-kirin": "雲嵐麒麟",
-  "storm-griffin": "風暴グリフォン"
+  "fire-lizard": "焔尾キツネ",
+  "coal-pig": "焦煤ブタ",
+  "lamp-fox": "火鱗トカゲ",
+  "red-rooster": "炎羽ヒナ",
+  "magma-turtle": "燼角オオカミ",
+  "blaze-panther": "熔甲ムシ",
+  "tinder-deer": "炎角ヒツジ",
+  "flame-crown-drake": "烈鬣ライオン",
+  "volcano-rhino": "火山岩サイ",
+  "scorch-phoenix": "赤焔神凰",
+  "bubble-dolphin": "貝爪ラッコ",
+  "tide-crab": "泡傘クラゲ",
+  "bluefin-rabbit": "珊芽カメ",
+  "mist-frog": "泡吻アザラシ",
+  "coral-turtle": "潮冠タツノオトシゴ",
+  "brook-cat": "浪紋幼獣",
+  "wave-otter": "晶鉗カニ",
+  "crystal-whale": "藍潮クジラ",
+  "deep-tide-jiao": "霜鰭ザメ",
+  "moon-bay-mer": "滄瀾海竜",
+  "grass-mouse": "芽角シカ",
+  "moss-turtle": "苔旋カタツムリ",
+  "flower-deer": "花刺ダンゴ",
+  "leaf-monkey": "茸耳ウサギ",
+  "vine-bear": "藤尾リン",
+  "honeybud-fox": "苔甲カメ",
+  "thorn-panther": "葉冠スズメ",
+  "ancient-stag": "枝冠鹿王",
+  "jade-eagle": "苔嶺クマ",
+  "forest-giant-bear": "森環神鹿",
+  "stone-rat": "砂尾キツネ",
+  "sand-lizard": "岩甲センザン",
+  "round-rock-sheep": "泥団クマ",
+  "copper-bug": "陶耳ネズミ",
+  "rock-horn-bull": "岩背オオカミ",
+  "sand-pattern-cat": "砂舟ラクダ",
+  "stone-shield-ape": "晶岩ヒキガエル",
+  "ridge-giant-turtle": "岩鎧ヤク",
+  "meteor-lion": "丘甲巨亀",
+  "ancient-golem": "玄岩神将",
+  "wind-chime-sparrow": "雲絨ヒツジ",
+  "cloud-rabbit": "霜羽キツネ",
+  "spin-dragonfly": "風羽スズメ",
+  "light-feather-cat": "風嚢イタチ",
+  "gale-wolf": "巻雲ウサギ",
+  "white-feather-deer": "羽角シカ",
+  "swift-weasel": "嵐爪獣",
+  "sky-thunder-vulture": "蒼羽ワシ",
+  "cloud-kirin": "雲牙オオカミ",
+  "storm-griffin": "天嵐神竜"
 };
 
 const skillJa: Record<string, string> = {
@@ -464,7 +465,14 @@ export const elementLabel = (language: Language, element: ElementType): string =
   language === "ja" ? elementJa[element] : ({ fire: "火", water: "水", forest: "森", earth: "土", wind: "风" } as Record<ElementType, string>)[element];
 
 export const growthLabel = (language: Language, growth: GrowthLevel): string =>
-  language === "ja" ? growthJa[growth] : ({ 1: "初始体", 2: "进化体", 3: "完全体" } as Record<GrowthLevel, string>)[growth];
+  language === "ja" ? growthJa[growth] : ({ 1: "初级", 2: "中级", 3: "高级", 4: "神兽" } as Record<GrowthLevel, string>)[growth];
+
+export const rarityLabel = (language: Language, rarity?: PetRarity): string => {
+  const value = rarity === "rare" || rarity === "weak" ? rarity : "normal";
+  const zh: Record<PetRarity, string> = { weak: "弱小", normal: "普通", rare: "稀有" };
+  const ja: Record<PetRarity, string> = { weak: "弱小", normal: "普通", rare: "希少" };
+  return language === "ja" ? ja[value] : zh[value];
+};
 
 export const statusLabel = (language: Language, id: StatusId, fallback: string): string =>
   language === "ja" ? statusJa[id] : fallback;
@@ -548,8 +556,10 @@ export const fusionReason = (language: Language, reason?: string): string | unde
   if (language === "zh" || !reason) return reason;
   const reasons: Record<string, string> = {
     "不能选择同一只宠物": "同じペットは選択できません",
-    "需要同一进化阶段": "同じ進化段階が必要です",
-    "完全体不可继续合成": "完全体はこれ以上合成できません",
+    "需要同一阶段": "同じ段階が必要です",
+    "神兽不可继续合成": "神獣はこれ以上合成できません",
+    "高级合成神兽需要同属性": "高級から神獣への合成は同じ属性が必要です",
+    "合成神兽需要两只不同高级宠物": "神獣合成には異なる高級ペット2体が必要です",
     "两只宠物都需要达到 Lv10": "2体とも Lv10 が必要です",
     "合成对象不存在。": "合成対象が存在しません。",
     "无法合成。": "合成できません。"
@@ -567,11 +577,11 @@ const replaceKnownTerms = (text: string): string => {
     ["赤砂火山", mapJa.volcano],
     ["岩牙峡谷", mapJa.canyon],
     ["风鸣高地", mapJa.highland],
-    ["古木鹿王投影", bossJa.meadow],
-    ["深潮蛟投影", bossJa.coast],
-    ["火山巨犀投影", bossJa.volcano],
-    ["古岩魔像投影", bossJa.canyon],
-    ["风暴狮鹫投影", bossJa.highland],
+    ["森环神鹿投影", bossJa.meadow],
+    ["沧澜海龙投影", bossJa.coast],
+    ["赤焰神凰投影", bossJa.volcano],
+    ["玄岩神将投影", bossJa.canyon],
+    ["天岚神龙投影", bossJa.highland],
     ["暴击", "会心"],
     ["效果拔群", "効果抜群"],
     ["效果较弱", "効果はいまひとつ"],
@@ -585,9 +595,13 @@ const replaceKnownTerms = (text: string): string => {
     ["再生", statusJa.regen],
     ["守护", statusJa.guard],
     ["防御中", statusJa.defending],
-    ["初始体", growthJa[1]],
-    ["进化体", growthJa[2]],
-    ["完全体", growthJa[3]]
+    ["初级", growthJa[1]],
+    ["中级", growthJa[2]],
+    ["高级", growthJa[3]],
+    ["神兽", growthJa[4]],
+    ["稀有", "希少"],
+    ["普通", "普通"],
+    ["弱小", "弱小"]
   ];
   replacements.sort((a, b) => b[0].length - a[0].length).forEach(([from, to]) => {
     next = replaceText(next, from, to);
@@ -648,7 +662,8 @@ export const translateLog = (language: Language, line: string): string => {
     .replace(/^(.+)分解为分解水晶 x(\d+)。$/, "$1を分解し、分解結晶 x$2 を獲得。")
     .replace(/^(.+)强化到 \+(\d+)。$/, "$1を +$2 に強化しました。")
     .replace(/^(.+)强化失败，消耗分解水晶 x(\d+)，当前仍为 \+(\d+)。$/, "$1の強化に失敗。分解結晶 x$2 を消費し、現在も +$3 です。")
-    .replace(/^只有完全体宠物可以强化。$/, "完全体ペットのみ強化できます。")
+    .replace(/^只有高级宠物可以强化。$/, "高級ペットのみ強化できます。")
+    .replace(/^神兽暂时不可分解。$/, "神獣は現在分解できません。")
     .replace(/^强化已经达到上限。$/, "強化はすでに上限です。")
     .replace(/^分解水晶不足。$/, "分解結晶が足りません。")
     .replace(/^出战中的宠物不可分解。$/, "出撃中のペットは分解できません。")

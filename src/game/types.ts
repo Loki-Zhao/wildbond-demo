@@ -1,5 +1,6 @@
 export type ElementType = "fire" | "water" | "forest" | "earth" | "wind";
-export type GrowthLevel = 1 | 2 | 3;
+export type GrowthLevel = 1 | 2 | 3 | 4;
+export type PetRarity = "weak" | "normal" | "rare";
 export type StatKey = "hp" | "attack" | "defense" | "speed" | "crit";
 
 export type StatusId =
@@ -73,6 +74,7 @@ export interface PetInstance {
   expLevel: number;
   exp: number;
   currentHp: number;
+  rarity?: PetRarity;
   enhanceLevel?: number;
   nickname?: string;
 }
@@ -139,6 +141,7 @@ export interface BattleUnit {
   ap: number;
   statuses: StatusEffect[];
   acted: boolean;
+  rarity?: PetRarity;
   enhanceLevel?: number;
   isBoss?: boolean;
   statMultiplier?: number;

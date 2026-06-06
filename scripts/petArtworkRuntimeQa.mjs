@@ -8,19 +8,71 @@ const browser = await chromium.launch({
   headless: true
 });
 
-const artworkSpecies = ["fire-lizard", "coal-pig", "lamp-fox", "red-rooster", "tinder-deer"];
-const makePet = (speciesId, index, level = 3) => ({
+const artworkSpecies = [
+  "grass-mouse",
+  "moss-turtle",
+  "flower-deer",
+  "leaf-monkey",
+  "vine-bear",
+  "honeybud-fox",
+  "thorn-panther",
+  "ancient-stag",
+  "jade-eagle",
+  "forest-giant-bear",
+  "bubble-dolphin",
+  "tide-crab",
+  "bluefin-rabbit",
+  "mist-frog",
+  "coral-turtle",
+  "brook-cat",
+  "wave-otter",
+  "crystal-whale",
+  "deep-tide-jiao",
+  "moon-bay-mer",
+  "fire-lizard",
+  "coal-pig",
+  "lamp-fox",
+  "red-rooster",
+  "magma-turtle",
+  "blaze-panther",
+  "tinder-deer",
+  "flame-crown-drake",
+  "volcano-rhino",
+  "scorch-phoenix",
+  "stone-rat",
+  "sand-lizard",
+  "round-rock-sheep",
+  "copper-bug",
+  "rock-horn-bull",
+  "sand-pattern-cat",
+  "stone-shield-ape",
+  "ridge-giant-turtle",
+  "meteor-lion",
+  "ancient-golem",
+  "wind-chime-sparrow",
+  "cloud-rabbit",
+  "spin-dragonfly",
+  "light-feather-cat",
+  "gale-wolf",
+  "white-feather-deer",
+  "swift-weasel",
+  "sky-thunder-vulture",
+  "cloud-kirin",
+  "storm-griffin"
+];
+const makePet = (speciesId, index, level = 10) => ({
   uid: `qa-${speciesId}-${index}`,
   speciesId,
   expLevel: level,
   exp: 0,
   currentHp: 999,
+  rarity: index % 3 === 0 ? "rare" : index % 3 === 1 ? "normal" : "weak",
   enhanceLevel: 0
 });
 const save = {
   party: artworkSpecies.slice(0, 3).map((speciesId, index) => makePet(speciesId, index)),
   storage: artworkSpecies.slice(3).map((speciesId, index) => makePet(speciesId, index + 3)),
-  activeMapId: "volcano",
+  activeMapId: "meadow",
   position: { x: 21, y: 15 },
   stepsSinceEncounter: 14,
   unlockedMaps: ["meadow", "volcano"],
@@ -84,7 +136,7 @@ for (const viewport of [
   await page.locator(".panel-tabs button", { hasText: "图鉴" }).click();
   await page.waitForTimeout(120);
   const dexCount = await page.locator(".dex-grid .pet-art-image").count();
-  await page.locator(".dex-card", { hasText: "火绒鹿" }).click();
+  await page.locator(".dex-card", { hasText: "森环神鹿" }).click();
   await page.waitForSelector(".dex-detail-panel .pet-art-image");
   const detail = await page.locator(".dex-detail-panel .pet-art-image").evaluate((image) => {
     const rect = image.getBoundingClientRect();
@@ -95,7 +147,7 @@ for (const viewport of [
       width: Math.round(rect.width)
     };
   });
-  await page.screenshot({ path: `/tmp/fire-v2-${viewport.name}-dex.png` });
+  await page.screenshot({ path: `/tmp/latest-pets-${viewport.name}-dex.png` });
   await page.locator(".modal-close").click();
 
   let battle;
@@ -131,19 +183,19 @@ for (const viewport of [
       enemyArtworkVisible: enemyArtworkCount > 0,
       battleStillInteractive: (await page.locator(".battle-panel").count()) > 0 || (await page.locator(".map-shell").count()) > 0
     };
-    await page.screenshot({ path: "/tmp/fire-v2-desktop-battle.png" });
+    await page.screenshot({ path: "/tmp/latest-pets-desktop-battle.png" });
   }
 
   results.push({
     ...viewport,
     battle,
     checks: {
-      dexHasAllFive: dexCount === 5,
+      dexHasAllFifty: dexCount === 50,
       detailUsesLargeArtwork: detail.width === (viewport.isMobile ? 64 : 128) && detail.height === (viewport.isMobile ? 64 : 128),
       imagesLoadAt512: party.images.every((image) => image.complete && image.naturalWidth === 512 && image.naturalHeight === 512),
       imagesUseContain: party.images.every((image) => image.objectFit === "contain" && image.imageRendering === "auto"),
       partyHasThree: party.count === 3,
-      storageHasTwo: storageCount === 2
+      storageHasFortySeven: storageCount === 47
     },
     detail,
     party

@@ -1,6 +1,6 @@
 import { STATUS_LABELS } from "../data/skills";
 import { getPetSpecies } from "../data/pets";
-import type { BattleUnit, ElementType, GrowthLevel, PetInstance, Stats, StatusEffect } from "./types";
+import type { BattleUnit, ElementType, GrowthLevel, PetInstance, PetRarity, Stats, StatusEffect } from "./types";
 
 export const ELEMENT_LABELS: Record<ElementType, string> = {
   fire: "火",
@@ -19,9 +19,22 @@ export const ELEMENT_COLORS: Record<ElementType, string> = {
 };
 
 export const GROWTH_LABELS: Record<GrowthLevel, string> = {
-  1: "初始体",
-  2: "进化体",
-  3: "完全体"
+  1: "初级",
+  2: "中级",
+  3: "高级",
+  4: "神兽"
+};
+
+export const RARITY_LABELS: Record<PetRarity, string> = {
+  weak: "弱小",
+  normal: "普通",
+  rare: "稀有"
+};
+
+export const RARITY_MULTIPLIERS: Record<PetRarity, number> = {
+  weak: 0.9,
+  normal: 1,
+  rare: 1.1
 };
 
 export const MIN_PET_LEVEL = 1;
@@ -118,10 +131,27 @@ export const enhancementSpent = (enhanceLevel = 0): number =>
 
 export const decomposeCrystalValue = (pet: PetInstance): number => {
   const species = getPetSpecies(pet.speciesId);
+  if (species.growthLevel === 4) return 0;
   return species.growthLevel + (species.growthLevel === 3 ? enhancementSpent(pet.enhanceLevel) : 0);
 };
 
 const clampCrit = (value: number): number => Math.max(MIN_CRIT_RATE, Math.min(MAX_CRIT_RATE, Math.round(value)));
+
+export const clampRarity = (rarity?: PetRarity): PetRarity => (rarity === "weak" || rarity === "rare" ? rarity : "normal");
+
+export const randomWildRarity = (random: () => number = Math.random): PetRarity => {
+  const roll = random();
+  if (roll < 0.1) return "rare";
+  if (roll < 0.6) return "normal";
+  return "weak";
+};
+
+export const randomFusionRarity = (random: () => number = Math.random): PetRarity => {
+  const roll = random();
+  if (roll < 0.2) return "rare";
+  if (roll < 0.6) return "normal";
+  return "weak";
+};
 
 const elementStatProfile: Record<
   ElementType,
@@ -140,23 +170,24 @@ const elementStatProfile: Record<
   wind: { hp: 0.9, attack: 1.14, defense: 0.86, speed: 1.22, critBonus: 5 }
 };
 
-export const getStatsForSpecies = (speciesId: string, expLevel: number, enhanceLevel = 0): Stats => {
+export const getStatsForSpecies = (speciesId: string, expLevel: number, enhanceLevel = 0, rarity: PetRarity = "normal"): Stats => {
   const species = getPetSpecies(speciesId);
   const level = clampPetLevel(expLevel);
   const growth = 1 + (level - 1) * 0.055;
   const profile = elementStatProfile[species.element];
+  const rarityMultiplier = RARITY_MULTIPLIERS[clampRarity(rarity)];
   const enhance = clampEnhanceLevel(enhanceLevel);
   const enhanceMultiplier = species.growthLevel === 3 ? 1 + enhance * ENHANCE_STAT_STEP : 1;
   return {
-    hp: Math.max(1, Math.round((species.baseStats.hp * growth + level * 2) * profile.hp * enhanceMultiplier)),
-    attack: Math.max(1, Math.round((species.baseStats.attack * growth + level * 0.7) * profile.attack * enhanceMultiplier)),
-    defense: Math.max(1, Math.round((species.baseStats.defense * growth + level * 0.55) * profile.defense * enhanceMultiplier)),
-    speed: Math.max(1, Math.round((species.baseStats.speed * growth + level * 0.45) * profile.speed * enhanceMultiplier)),
-    crit: clampCrit(species.baseStats.crit + level * 0.8 + profile.critBonus + enhance * ENHANCE_CRIT_STEP)
+    hp: Math.max(1, Math.round((species.baseStats.hp * growth + level * 2) * profile.hp * rarityMultiplier * enhanceMultiplier)),
+    attack: Math.max(1, Math.round((species.baseStats.attack * growth + level * 0.7) * profile.attack * rarityMultiplier * enhanceMultiplier)),
+    defense: Math.max(1, Math.round((species.baseStats.defense * growth + level * 0.55) * profile.defense * rarityMultiplier * enhanceMultiplier)),
+    speed: Math.max(1, Math.round((species.baseStats.speed * growth + level * 0.45) * profile.speed * rarityMultiplier * enhanceMultiplier)),
+    crit: clampCrit(species.baseStats.crit * rarityMultiplier + level * 0.8 + profile.critBonus + enhance * ENHANCE_CRIT_STEP)
   };
 };
 
-export const getPetStats = (pet: PetInstance): Stats => getStatsForSpecies(pet.speciesId, pet.expLevel, pet.enhanceLevel);
+export const getPetStats = (pet: PetInstance): Stats => getStatsForSpecies(pet.speciesId, pet.expLevel, pet.enhanceLevel, pet.rarity);
 
 export const multiplyStats = (stats: Stats, multiplier = 1): Stats => {
   if (multiplier === 1) return stats;
@@ -169,8 +200,8 @@ export const multiplyStats = (stats: Stats, multiplier = 1): Stats => {
   };
 };
 
-export const getBattleUnitStats = (unit: Pick<BattleUnit, "speciesId" | "expLevel" | "statMultiplier" | "enhanceLevel">): Stats =>
-  multiplyStats(getStatsForSpecies(unit.speciesId, unit.expLevel, unit.enhanceLevel), unit.statMultiplier ?? 1);
+export const getBattleUnitStats = (unit: Pick<BattleUnit, "speciesId" | "expLevel" | "statMultiplier" | "enhanceLevel" | "rarity">): Stats =>
+  multiplyStats(getStatsForSpecies(unit.speciesId, unit.expLevel, unit.enhanceLevel, unit.rarity), unit.statMultiplier ?? 1);
 
 export const getMaxHp = (petOrSpeciesId: PetInstance | string, expLevel = 1): number => {
   if (typeof petOrSpeciesId === "string") {
@@ -219,7 +250,7 @@ export const getModifiedStats = (unit: BattleUnit): Stats => {
   };
 };
 
-export const clampHp = (value: number, unit: Pick<BattleUnit, "speciesId" | "expLevel" | "statMultiplier" | "enhanceLevel">): number => {
+export const clampHp = (value: number, unit: Pick<BattleUnit, "speciesId" | "expLevel" | "statMultiplier" | "enhanceLevel" | "rarity">): number => {
   const maxHp = getBattleUnitStats(unit).hp;
   return Math.max(0, Math.min(maxHp, Math.round(value)));
 };

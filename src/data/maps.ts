@@ -9,8 +9,8 @@ export const MAPS: MapDefinition[] = [
     height: 60,
     encounterRate: 0.1,
     rareRate: 0.13,
-    bossSpeciesId: "ancient-stag",
-    bossName: "古木鹿王投影",
+    bossSpeciesId: "forest-giant-bear",
+    bossName: "森环神鹿投影",
     camp: { x: 8, y: 8 },
     boss: { x: 72, y: 52 },
     palette: {
@@ -42,8 +42,8 @@ export const MAPS: MapDefinition[] = [
     height: 64,
     encounterRate: 0.1,
     rareRate: 0.14,
-    bossSpeciesId: "deep-tide-jiao",
-    bossName: "深潮蛟投影",
+    bossSpeciesId: "moon-bay-mer",
+    bossName: "沧澜海龙投影",
     camp: { x: 8, y: 9 },
     boss: { x: 82, y: 56 },
     palette: {
@@ -75,8 +75,8 @@ export const MAPS: MapDefinition[] = [
     height: 70,
     encounterRate: 0.11,
     rareRate: 0.15,
-    bossSpeciesId: "volcano-rhino",
-    bossName: "火山巨犀投影",
+    bossSpeciesId: "scorch-phoenix",
+    bossName: "赤焰神凰投影",
     camp: { x: 9, y: 8 },
     boss: { x: 76, y: 62 },
     palette: {
@@ -109,7 +109,7 @@ export const MAPS: MapDefinition[] = [
     encounterRate: 0.11,
     rareRate: 0.15,
     bossSpeciesId: "ancient-golem",
-    bossName: "古岩魔像投影",
+    bossName: "玄岩神将投影",
     camp: { x: 9, y: 9 },
     boss: { x: 88, y: 64 },
     palette: {
@@ -142,7 +142,7 @@ export const MAPS: MapDefinition[] = [
     encounterRate: 0.12,
     rareRate: 0.16,
     bossSpeciesId: "storm-griffin",
-    bossName: "风暴狮鹫投影",
+    bossName: "天岚神龙投影",
     camp: { x: 9, y: 9 },
     boss: { x: 92, y: 68 },
     palette: {

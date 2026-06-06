@@ -47,6 +47,7 @@ import {
   growthLabel,
   mapName,
   petName,
+  rarityLabel,
   readStoredLanguage,
   roleText,
   skillTooltip,
@@ -109,7 +110,7 @@ function PetCard({
         <div>
           <strong>{petName(language, species.id, species.name)}{enhanceSuffix}</strong>
           <span>
-            {growthLabel(language, species.growthLevel)} · Lv{pet.expLevel}
+            {growthLabel(language, species.growthLevel)} · {rarityLabel(language, pet.rarity)} · Lv{pet.expLevel}
           </span>
         </div>
       </div>
@@ -163,7 +164,7 @@ function StarterOverlay({ language, onChoose }: { language: Language; onChoose: 
                 </span>
                 <strong>{petName(language, species.id, species.name)}</strong>
                 <small>
-                  {elementLabel(language, species.element)} · Lv3 · {roleText(language, species.role)}
+              {elementLabel(language, species.element)} · Lv3 · {rarityLabel(language, "rare")} · {roleText(language, species.role)}
                 </small>
               </button>
             );
@@ -517,8 +518,9 @@ export function App() {
   const decomposePet = (uid: string) => {
     setGame((current) => {
       const pet = current.storage.find((item) => item.uid === uid);
-      if (!pet) return addLog(current, "出战中的宠物不可分解。");
+    if (!pet) return addLog(current, "出战中的宠物不可分解。");
       const species = getPetSpecies(pet.speciesId);
+      if (species.growthLevel === 4) return addLog(current, "神兽暂时不可分解。");
       const crystals = decomposeCrystalValue(pet);
       return addLog(
         {
@@ -539,7 +541,7 @@ export function App() {
     if (!targetPet) return;
     const species = getPetSpecies(targetPet.speciesId);
     if (species.growthLevel !== 3) {
-      setGame(addLog(game, "只有完全体宠物可以强化。"));
+      setGame(addLog(game, "只有高级宠物可以强化。"));
       return;
     }
     const currentEnhance = targetPet.enhanceLevel ?? 0;
@@ -761,6 +763,7 @@ export function App() {
                     const species = getPetSpecies(pet.speciesId);
                     const enhanceCost = enhancementCostForNext(pet.enhanceLevel ?? 0);
                     const canEnhance = species.growthLevel === 3 && Boolean(enhanceCost) && game.inventory.crystals >= (enhanceCost ?? 0);
+                    const canDecompose = species.growthLevel !== 4;
                     return (
                       <PetCard
                         key={pet.uid}
@@ -772,12 +775,16 @@ export function App() {
                             <button onClick={() => moveToParty(pet.uid)}>{t(language, "deploy")}</button>
                             <button
                               onClick={() => enhancePet(pet.uid)}
-                              disabled={species.growthLevel !== 3 || !enhanceCost || !canEnhance}
+                            disabled={species.growthLevel !== 3 || !enhanceCost || !canEnhance}
                               title={enhanceCost ? `${t(language, "enhance")} ${enhanceCost} ${t(language, "crystal")}` : t(language, "maxEnhance")}
                             >
                               <PixelIcon name="chevronUp" size={16} /> {t(language, "enhance")}
                             </button>
-                            <button onClick={() => decomposePet(pet.uid)}>
+                            <button
+                              onClick={() => decomposePet(pet.uid)}
+                              disabled={!canDecompose}
+                              title={!canDecompose ? (language === "ja" ? "神獣は現在分解できません" : "神兽暂时不可分解") : undefined}
+                            >
                               <PixelIcon name="trash" size={16} /> {t(language, "decompose")}
                             </button>
                           </>

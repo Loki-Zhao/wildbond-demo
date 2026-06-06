@@ -4,6 +4,7 @@ import { getSkill } from "../data/skills";
 import {
   clampHp,
   clampPetLevel,
+  clampRarity,
   describeElementMultiplier,
   elementMultiplier,
   expToNext,
@@ -14,13 +15,14 @@ import {
   isAlive,
   makeStatus,
   MAX_PET_LEVEL,
+  randomWildRarity,
   calculateElementalAttackDamage,
   upsertStatus
 } from "./balance";
 import { createPetInstance, markSpecies, syncUnlocks } from "./state";
 import type { BattleResult, BattleState, BattleUnit, EncounterEntry, GameState, GrowthLevel, MapDefinition, PetInstance, Skill } from "./types";
 
-export const BOSS_COMPLETE_STAT_MULTIPLIER = 1.15;
+export const BOSS_COMPLETE_STAT_MULTIPLIER = 0.9;
 export const MAX_BOSS_CHALLENGE_LEVEL = 3;
 export const BOSS_CHALLENGE_STAT_MULTIPLIERS = [BOSS_COMPLETE_STAT_MULTIPLIER, 1.2, 1.3, 1.4] as const;
 export const CAPTURE_STONE_DROP_RATE = 0.6;
@@ -178,6 +180,7 @@ const createUnitFromPet = (pet: PetInstance): BattleUnit => ({
   instanceUid: pet.uid,
   speciesId: pet.speciesId,
   expLevel: pet.expLevel,
+  rarity: clampRarity(pet.rarity),
   enhanceLevel: pet.enhanceLevel,
   currentHp: Math.max(1, Math.min(pet.currentHp, getMaxHp(pet))),
   ap: 1,
@@ -186,16 +189,22 @@ const createUnitFromPet = (pet: PetInstance): BattleUnit => ({
   captureAttempts: 0
 });
 
-const createEnemyUnit = (speciesId: string, index: number, options?: { isBoss?: boolean; level?: number; statMultiplier?: number }): BattleUnit => {
+const createEnemyUnit = (
+  speciesId: string,
+  index: number,
+  options?: { isBoss?: boolean; level?: number; statMultiplier?: number; rarity?: BattleUnit["rarity"] }
+): BattleUnit => {
   const isBoss = options?.isBoss ?? false;
   const expLevel = clampPetLevel(options?.level ?? 1);
   const statMultiplier = options?.statMultiplier;
+  const rarity = clampRarity(options?.rarity);
   return {
     id: `enemy-${speciesId}-${index}-${Math.random().toString(36).slice(2, 7)}`,
     side: "enemy",
     speciesId,
     expLevel,
-    currentHp: getBattleUnitStats({ speciesId, expLevel, statMultiplier }).hp,
+    rarity,
+    currentHp: getBattleUnitStats({ speciesId, expLevel, statMultiplier, rarity }).hp,
     ap: 1,
     statuses: [],
     acted: false,
@@ -257,7 +266,7 @@ export const createWildBattle = (state: GameState): BattleState => {
   const encounterCandidates = wildEncounterCandidatesForPosition(state, map);
   const enemies = Array.from({ length: enemyCount }, (_, index) => {
     const entry = weightedPick(encounterCandidates);
-    return createEnemyUnit(entry.speciesId, index, { level: enemyLevel });
+    return createEnemyUnit(entry.speciesId, index, { level: enemyLevel, rarity: randomWildRarity() });
   });
 
   return withActiveTurn({
@@ -279,14 +288,19 @@ export const createWildBattle = (state: GameState): BattleState => {
 export const createBossBattle = (state: GameState, bossChallengeLevel = 0): BattleState => {
   const map = getMapDefinition(state.activeMapId);
   const challengeLevel = clampBossChallengeLevel(bossChallengeLevel);
-  const completePool = PETS_BY_LEVEL[3].filter((species) => species.element === map.element);
+  const advancedPool = PETS_BY_LEVEL[3].filter((species) => species.element === map.element);
   const bossSpecies = getPetSpecies(map.bossSpeciesId);
   const bossTeam =
-    bossSpecies.growthLevel === 3
-      ? [bossSpecies, ...completePool.filter((species) => species.id !== bossSpecies.id)].slice(0, 3)
-      : completePool.slice(0, 3);
+    bossSpecies.growthLevel === 4
+      ? [bossSpecies, ...advancedPool].slice(0, 3)
+      : [...PETS_BY_LEVEL[4].filter((species) => species.element === map.element), ...advancedPool].slice(0, 3);
   const enemies = bossTeam.map((species, index) =>
-    createEnemyUnit(species.id, index, { isBoss: true, level: MAX_PET_LEVEL, statMultiplier: bossStatMultiplierForChallenge(challengeLevel) })
+    createEnemyUnit(species.id, index, {
+      isBoss: true,
+      level: MAX_PET_LEVEL,
+      rarity: "normal",
+      statMultiplier: bossStatMultiplierForChallenge(challengeLevel)
+    })
   );
 
   return withActiveTurn({
@@ -397,9 +411,9 @@ const applySkillToTarget = (caster: BattleUnit, target: BattleUnit, skill: Skill
       defenderElement: targetSpecies.element
     });
     damage *= 1 - armor;
-    if (skill.id === "ember-claw" && getStatus(target.statuses, "burn")) damage *= 1.25;
-    if (skill.id === "flame-chase" && target.currentHp / getBattleUnitStats(target).hp <= 0.4) damage *= 1.3;
-    if (skill.id === "wind-blade" && casterStats.speed > targetStats.speed) damage *= 1.2;
+    if (["chasing-bite"].includes(skill.id) && getStatus(target.statuses, "burn")) damage *= 1.2;
+    if (["chasing-bite", "royal-fire-chase", "rapid-current-chase"].includes(skill.id) && target.currentHp / getBattleUnitStats(target).hp <= 0.4) damage *= 1.25;
+    if (["frostwind-claw", "wind-feather-peck", "glide-strike", "cloudcurl-leap"].includes(skill.id) && casterStats.speed > targetStats.speed) damage *= 1.15;
     if (critical) damage *= 1.5;
     const result = applyDamage(target, damage);
     nextTarget = result.target;
@@ -420,16 +434,25 @@ const applySkillToTarget = (caster: BattleUnit, target: BattleUnit, skill: Skill
 
   if (skill.shield || skill.buff) {
     const buff = skill.buff;
-    if (buff && !(skill.target === "allEnemies" && buff.id === "haste")) {
+    if (buff) {
       const value =
         buff.id === "guard" && skill.shield
           ? Math.round(skill.shield + casterStats.defense * (skill.multiplier ?? 0.5))
           : buff.value ?? skill.shield;
-      nextTarget = {
-        ...nextTarget,
-        statuses: upsertStatus(nextTarget.statuses, makeStatus(buff.id, buff.turns, value))
-      };
-      messages.push(`${targetSpecies.name}获得${makeStatus(buff.id, buff.turns, value).name}。`);
+      const status = makeStatus(buff.id, buff.turns, value);
+      if (skill.category === "attack" && buff.id === "haste") {
+        nextCaster = {
+          ...nextCaster,
+          statuses: upsertStatus(nextCaster.statuses, status)
+        };
+        messages.push(`${casterSpecies.name}获得${status.name}。`);
+      } else {
+        nextTarget = {
+          ...nextTarget,
+          statuses: upsertStatus(nextTarget.statuses, status)
+        };
+        messages.push(`${targetSpecies.name}获得${status.name}。`);
+      }
     }
   }
 
@@ -441,11 +464,8 @@ const applySkillToTarget = (caster: BattleUnit, target: BattleUnit, skill: Skill
     messages.push(`${targetSpecies.name}陷入${makeStatus(skill.status.id, skill.status.turns, skill.status.value).name}。`);
   }
 
-  if (skill.buff && skill.target === "allEnemies" && skill.buff.id === "haste") {
-    nextCaster = {
-      ...nextCaster,
-      statuses: upsertStatus(nextCaster.statuses, makeStatus(skill.buff.id, skill.buff.turns, skill.buff.value))
-    };
+  if (target.id === caster.id) {
+    nextCaster = nextTarget;
   }
 
   if (nextTarget.currentHp <= 0 && target.currentHp > 0) {
@@ -662,8 +682,8 @@ export const captureChance = (enemy: BattleUnit): number => {
   const maxHp = getBattleUnitStats(enemy).hp;
   const hpRatio = Math.max(0, Math.min(1, enemy.currentHp / maxHp));
   const missing = 1 - hpRatio;
-  const stageBase: Record<number, number> = { 1: 0.1, 2: 0.05, 3: 0.02 };
-  const stageCap: Record<number, number> = { 1: 0.8, 2: 0.55, 3: 0.35 };
+  const stageBase: Record<number, number> = { 1: 0.1, 2: 0.05, 3: 0.02, 4: 0.01 };
+  const stageCap: Record<number, number> = { 1: 0.8, 2: 0.55, 3: 0.35, 4: 0.2 };
   const base = stageBase[species.growthLevel];
   const cap = stageCap[species.growthLevel];
   const hpAdjusted = base + Math.pow(missing, 1.35) * (cap - base);
@@ -694,7 +714,7 @@ export const tryCapture = (battle: BattleState, enemyId: string): { battle: Batt
     };
   }
 
-  const pet = createPetInstance(enemy.speciesId, enemy.expLevel);
+  const pet = createPetInstance(enemy.speciesId, enemy.expLevel, enemy.rarity);
   const remainingEnemies = battle.enemies.filter((unit) => unit.id !== enemy.id);
   return {
     battle: appendRewardUnits(

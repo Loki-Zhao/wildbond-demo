@@ -1,7 +1,7 @@
 import { MAPS, getMapDefinition } from "../data/maps";
 import { PETS, STARTER_SPECIES_IDS, getPetSpecies } from "../data/pets";
-import { clampPetLevel, getMaxHp } from "./balance";
-import type { GameState, Inventory, PetInstance } from "./types";
+import { clampPetLevel, clampRarity, getMaxHp } from "./balance";
+import type { GameState, Inventory, PetInstance, PetRarity } from "./types";
 
 export const STARTER_EXP_LEVEL = 3;
 
@@ -20,15 +20,17 @@ const defaultInventory = (): Inventory => ({
 
 export const createUid = (prefix: string): string => `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
-export const createPetInstance = (speciesId: string, expLevel?: number): PetInstance => {
+export const createPetInstance = (speciesId: string, expLevel?: number, rarity: PetRarity = "normal"): PetInstance => {
   getPetSpecies(speciesId);
   const level = clampPetLevel(expLevel ?? 1);
+  const normalizedRarity = clampRarity(rarity);
   return {
     uid: createUid(speciesId),
     speciesId,
     expLevel: level,
     exp: 0,
-    currentHp: getMaxHp(speciesId, level),
+    rarity: normalizedRarity,
+    currentHp: getMaxHp({ uid: "preview", speciesId, expLevel: level, exp: 0, currentHp: 1, rarity: normalizedRarity }),
     enhanceLevel: 0
   };
 };
@@ -121,7 +123,7 @@ export const addPetToCollection = (state: GameState, pet: PetInstance): GameStat
 };
 
 export const chooseStarter = (state: GameState, speciesId: string): GameState => {
-  const starter = createPetInstance(speciesId, STARTER_EXP_LEVEL);
+  const starter = createPetInstance(speciesId, STARTER_EXP_LEVEL, "rare");
   const species = getPetSpecies(speciesId);
   return syncUnlocks(
     markSpecies(

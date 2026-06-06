@@ -815,3 +815,30 @@ https://healthcare-actively-platforms-ranger.trycloudflare.com
 - `scripts/pixelAssetAudit.mjs` 通过：地图、人物、UI 与现有程序化像素资源链路未回退。
 - `scripts/authoredSpriteAudit.mjs` 与 `scripts/crossElementSpriteAudit.mjs` 通过。
 - 本地构建与 GitHub Pages 子路径构建通过。
+
+## 41. 全宠物 512x512 新设定、品质与神兽系统 v3.8
+
+已完成：
+
+- 接入 `下载/最新宠物设计` 中 50 张新宠物美术，全部为 `512×512 RGBA PNG`，并按 5 属性映射到现有内部宠物 ID。
+- 每个属性调整为 4 只初级、3 只中级、2 只高级、1 只神兽；阶段标签从旧的初始体/进化体/完全体改为初级/中级/高级/神兽。
+- 根据新形象重命名 50 只宠物，并重做基础属性、定位与技能配置。
+- 新增宠物品质：弱小、普通、稀有；属性倍率分别为 0.9、1.0、1.1。
+- 开局 5 只初始宠物固定为 Lv3 稀有；旧存档宠物自动补齐为普通品质。
+- 野外遇敌品质概率为稀有 10%、普通 50%、弱小 40%，且野外只出现初级和中级宠物。
+- 合成规则扩展：初级到中级成功率 80%，中级到高级成功率 50%，同属性两只不同高级 Lv10 可 30% 合成神兽。
+- 合成成功或失败产物品质按稀有 20%、普通 40%、弱小 40% 随机。
+- 神兽暂时不可强化、不可分解、不可作为继续合成材料。
+- Boss 队伍改为当前地图属性的 1 只神兽 Lv10 + 2 只高级 Lv10，品质固定普通且不可捕获。
+- 因 Boss 队伍加入神兽，普通 Boss 基础倍率从旧 1.15 调整为 0.9；强化挑战仍使用 1.2、1.3、1.4。
+- 游戏说明补充品质、神兽、野外阶段、Boss 构成和合成概率等新规则。
+- 新增 `scripts/latestPetUpgradeQa.mjs`，覆盖阶段数量、开局稀有、野外阶段限制、Boss 队伍、神兽合成和 Boss 平衡模拟。
+- 更新 `scripts/petArtworkRuntimeQa.mjs`，从 5 张火系检查扩展为 50 张全宠物显示检查。
+
+已检查：
+
+- `./.tools/bin/node scripts/latestPetUpgradeQa.mjs http://127.0.0.1:5173/` 通过。
+- Boss 平衡模拟结果：普通 Boss 在推荐高级 Lv10 队伍下均可战胜；神兽队伍挑战普通 Boss 更轻松；多数强化挑战仍有明显压力。
+- `./.tools/bin/node scripts/petArtworkRuntimeQa.mjs http://127.0.0.1:5173/` 通过：PC/手机队伍、仓库、图鉴、详情和战斗均正确加载 50 张 `512×512` 新图。
+- `./.tools/bin/node scripts/pixelAssetAudit.mjs` 通过。
+- `./.tools/bin/npm run build` 通过。

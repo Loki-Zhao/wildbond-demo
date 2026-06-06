@@ -4,7 +4,7 @@ import { getSkill } from "../data/skills";
 import { ELEMENT_COLORS, getBattleUnitStats } from "../game/balance";
 import { captureChance, getActiveUnit } from "../game/combat";
 import type { BattleState, BattleUnit, ElementType, Skill, SkillCategory } from "../game/types";
-import { elementLabel, petName, skillName, skillTooltip, statusLabel, t, translateLog, type Language } from "../i18n";
+import { elementLabel, petName, rarityLabel, skillName, skillTooltip, statusLabel, t, translateLog, type Language } from "../i18n";
 import { PixelIcon } from "./PixelIcon";
 import { PixelPetSprite } from "./PixelSprite";
 import { ShortcutHint } from "./ShortcutHint";
@@ -104,6 +104,7 @@ function CombatantSlot({
             {elementLabel(language, species.element)}
           </span>
           <strong>{petName(language, species.id, species.name)}</strong>
+          <span className={`rarity-tag rarity-${unit.rarity ?? "normal"}`}>{rarityLabel(language, unit.rarity)}</span>
           {unit.isBoss ? <span className="boss-tag">{t(language, "boss")}</span> : null}
           {hasActed ? <span className="acted-tag">{t(language, "acted")}</span> : null}
         </span>

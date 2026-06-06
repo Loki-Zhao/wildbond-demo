@@ -1,26 +1,31 @@
 import { PETS_BY_LEVEL, getPetSpecies } from "../data/pets";
-import { GROWTH_LABELS, MAX_PET_LEVEL } from "./balance";
+import { GROWTH_LABELS, MAX_PET_LEVEL, randomFusionRarity } from "./balance";
 import { createPetInstance, markSpecies, syncUnlocks } from "./state";
 import type { GameState, GrowthLevel, PetInstance } from "./types";
 
-type FusionSourceLevel = 1 | 2;
+type FusionSourceLevel = 1 | 2 | 3;
 type RandomSource = () => number;
 
 export const FUSION_SUCCESS_RATES: Record<FusionSourceLevel, number> = {
   1: 0.8,
-  2: 0.5
+  2: 0.5,
+  3: 0.3
 };
 
 export const fusionSuccessRateForGrowth = (growthLevel: GrowthLevel): number | undefined =>
-  growthLevel === 1 || growthLevel === 2 ? FUSION_SUCCESS_RATES[growthLevel] : undefined;
+  growthLevel === 1 || growthLevel === 2 || growthLevel === 3 ? FUSION_SUCCESS_RATES[growthLevel] : undefined;
 
 export const canFuse = (a: PetInstance, b: PetInstance): { ok: boolean; reason?: string } => {
   if (a.uid === b.uid) return { ok: false, reason: "不能选择同一只宠物" };
   const speciesA = getPetSpecies(a.speciesId);
   const speciesB = getPetSpecies(b.speciesId);
-  if (speciesA.growthLevel !== speciesB.growthLevel) return { ok: false, reason: "需要同一进化阶段" };
-  if (speciesA.growthLevel === 3) return { ok: false, reason: "完全体不可继续合成" };
+  if (speciesA.growthLevel !== speciesB.growthLevel) return { ok: false, reason: "需要同一阶段" };
   if (a.expLevel < MAX_PET_LEVEL || b.expLevel < MAX_PET_LEVEL) return { ok: false, reason: "两只宠物都需要达到 Lv10" };
+  if (speciesA.growthLevel === 4) return { ok: false, reason: "神兽不可继续合成" };
+  if (speciesA.growthLevel === 3) {
+    if (speciesA.element !== speciesB.element) return { ok: false, reason: "高级合成神兽需要同属性" };
+    if (speciesA.id === speciesB.id) return { ok: false, reason: "合成神兽需要两只不同高级宠物" };
+  }
   return { ok: true };
 };
 
@@ -52,9 +57,9 @@ export const fusePets = (
   const targetLevel = (sourceLevel + 1) as GrowthLevel;
   const successRate = fusionSuccessRateForGrowth(sourceLevel) ?? 0;
   const success = random() < successRate;
-  const lockedElement = firstSpecies.element === secondSpecies.element ? firstSpecies.element : undefined;
+  const lockedElement = sourceLevel === 3 || firstSpecies.element === secondSpecies.element ? firstSpecies.element : undefined;
   const resultSpeciesId = success ? randomSpeciesFromPool(targetLevel, random, lockedElement) : pickRandom([first, second], random).speciesId;
-  const resultPet = createPetInstance(resultSpeciesId);
+  const resultPet = createPetInstance(resultSpeciesId, 1, randomFusionRarity(random));
   const resultSpecies = getPetSpecies(resultSpeciesId);
 
   let nextParty = state.party.filter((pet) => pet.uid !== firstUid && pet.uid !== secondUid);
@@ -77,8 +82,8 @@ export const fusePets = (
         firstLv2FusionDone: state.firstLv2FusionDone || (success && sourceLevel === 2),
         log: [
           success
-            ? `合成成功，获得${GROWTH_LABELS[resultSpecies.growthLevel]}${resultSpecies.name} Lv1。`
-            : `合成失败，两只材料消失，留下${resultSpecies.name} Lv1。`,
+            ? `合成成功，获得${GROWTH_LABELS[resultSpecies.growthLevel]}${resultSpecies.name} Lv1（${resultPet.rarity === "rare" ? "稀有" : resultPet.rarity === "weak" ? "弱小" : "普通"}）。`
+            : `合成失败，两只材料消失，留下${resultSpecies.name} Lv1（${resultPet.rarity === "rare" ? "稀有" : resultPet.rarity === "weak" ? "弱小" : "普通"}）。`,
           ...state.log
         ].slice(0, 80)
       },
