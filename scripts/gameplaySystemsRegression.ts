@@ -68,7 +68,7 @@ const assertElementProfiles = (): void => {
 };
 
 const assertEnhancementEconomy = (): void => {
-  const pet = createPetInstance("storm-griffin", MAX_PET_LEVEL);
+  const pet = createPetInstance("sky-thunder-vulture", MAX_PET_LEVEL);
   assert(enhancementCostForNext(0) === 3, "enhance +1 should cost 3 crystals");
   assert(enhancementCostForNext(1) === 6, "enhance +2 should cost 6 crystals");
   assert(enhancementCostForNext(2) === 10, "enhance +3 should cost 10 crystals");
@@ -87,9 +87,11 @@ const assertEnhancementEconomy = (): void => {
 const assertFusionRiskEconomy = (): void => {
   assert(FUSION_SUCCESS_RATES[1] === 0.8, "initial-to-evolved fusion should have 80% success rate");
   assert(FUSION_SUCCESS_RATES[2] === 0.5, "evolved-to-complete fusion should have 50% success rate");
+  assert(FUSION_SUCCESS_RATES[3] === 0.3, "complete-to-deity fusion should have 30% success rate");
   assert(fusionSuccessRateForGrowth(1) === 0.8, "initial fusion rate helper should return 80%");
   assert(fusionSuccessRateForGrowth(2) === 0.5, "evolved fusion rate helper should return 50%");
-  assert(fusionSuccessRateForGrowth(3) === undefined, "complete pets should have no fusion success rate");
+  assert(fusionSuccessRateForGrowth(3) === 0.3, "complete fusion rate helper should return 30%");
+  assert(fusionSuccessRateForGrowth(4) === undefined, "deity pets should have no fusion success rate");
 
   const initialA = createPetInstance("fire-lizard", MAX_PET_LEVEL);
   const initialB = createPetInstance("bubble-dolphin", MAX_PET_LEVEL);

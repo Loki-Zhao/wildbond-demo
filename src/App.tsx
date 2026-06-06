@@ -664,13 +664,6 @@ export function App() {
               startBattle(createBossBattle(game, currentBossChallengeLevel + 1));
             }}
           />
-
-          <div className="dpad">
-            <button onClick={() => move(0, -1)}>↑</button>
-            <button onClick={() => move(-1, 0)}>←</button>
-            <button onClick={() => move(0, 1)}>↓</button>
-            <button onClick={() => move(1, 0)}>→</button>
-          </div>
         </div>
 
         <aside className="right-column">

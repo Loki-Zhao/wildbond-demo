@@ -54,7 +54,6 @@ interface BattleAnimation {
 interface PendingSkillTarget {
   skill: Skill;
   actorId: string;
-  targetSide: "enemy" | "ally";
   targets: BattleUnit[];
 }
 
@@ -140,12 +139,14 @@ export function BattleView({
   const [selectedFriendId, setSelectedFriendId] = useState<string | undefined>(activeAlly?.id ?? battle.allies.find((unit) => unit.currentHp > 0)?.id);
   const [effect, setEffect] = useState<BattleAnimation | null>(null);
   const [busy, setBusy] = useState(false);
-  const [pendingSkill, setPendingSkill] = useState<PendingSkillTarget | null>(null);
+  const [pendingSupportSkill, setPendingSupportSkill] = useState<PendingSkillTarget | null>(null);
   const [showEncounterNotice, setShowEncounterNotice] = useState(true);
   const { bindSkillInfo, skillInfoPopup } = useSkillInfo();
   const resolved = outcome === "defeat";
   const skills = activeAlly ? getPetSpecies(activeAlly.speciesId).skillIds.map(getSkill) : [];
   const canPlayerAct = Boolean(activeAlly && activeAlly.currentHp > 0 && !activeAlly.acted && !busy && !resolved);
+  const selectedEnemy = battle.enemies.find((unit) => unit.id === selectedEnemyId && unit.currentHp > 0) ?? battle.enemies.find((unit) => unit.currentHp > 0);
+  const selectedFriend = battle.allies.find((unit) => unit.id === selectedFriendId && unit.currentHp > 0) ?? activeAlly ?? battle.allies.find((unit) => unit.currentHp > 0);
   const encounterNoticeText = battle.bossChallengeLevel
     ? t(language, "enhancedBossAppeared")
     : battle.isBoss
@@ -160,7 +161,7 @@ export function BattleView({
   };
 
   useEffect(() => {
-    setPendingSkill(null);
+    setPendingSupportSkill(null);
     if (activeAlly) {
       setSelectedFriendId(activeAlly.id);
     } else if (!battle.allies.some((unit) => unit.id === selectedFriendId && unit.currentHp > 0)) {
@@ -220,16 +221,16 @@ export function BattleView({
     if (!canPlayerAct || !activeAlly || actorId !== activeAlly.id || activeAlly.ap < skill.apCost) return;
     const resolvedTargetId =
       skill.target === "enemy"
-        ? battle.enemies.find((unit) => unit.id === targetId && unit.currentHp > 0)?.id ?? battle.enemies.find((unit) => unit.currentHp > 0)?.id
+        ? battle.enemies.find((unit) => unit.id === targetId && unit.currentHp > 0)?.id ?? selectedEnemy?.id
         : skill.target === "ally"
-          ? battle.allies.find((unit) => unit.id === targetId && unit.currentHp > 0)?.id ?? activeAlly.id
+          ? battle.allies.find((unit) => unit.id === targetId && unit.currentHp > 0)?.id
           : skill.target === "self"
             ? activeAlly.id
             : undefined;
     if ((skill.target === "enemy" || skill.target === "ally") && !resolvedTargetId) return;
     const targetIds = resolveTargetIdsForAction(skill, resolvedTargetId);
     setBusy(true);
-    setPendingSkill(null);
+    setPendingSupportSkill(null);
     queueEffect({ id: Date.now(), sourceSide: "ally", actorId: activeAlly.id, targetIds, element: skill.element, category: skill.category });
     onUseSkill(activeAlly.id, skill.id, resolvedTargetId);
     window.setTimeout(() => setBusy(false), 260);
@@ -237,19 +238,22 @@ export function BattleView({
 
   const prepareSkillAction = (skill: Skill) => {
     if (!canPlayerAct || !activeAlly) return;
-    if (skill.target === "enemy" || skill.target === "ally") {
+    if (skill.target === "enemy") {
+      executeSkillAction(activeAlly.id, skill, selectedEnemy?.id);
+      return;
+    }
+    if (skill.target === "ally") {
       const targets = selectableTargets(skill);
       if (targets.length === 0) return;
-      if (targets.length > 1) {
-        setPendingSkill({
-          skill,
-          actorId: activeAlly.id,
-          targetSide: skill.target,
-          targets
-        });
+      if (targets.length === 1) {
+        executeSkillAction(activeAlly.id, skill, targets[0].id);
         return;
       }
-      executeSkillAction(activeAlly.id, skill, targets[0].id);
+      setPendingSupportSkill({
+        skill,
+        actorId: activeAlly.id,
+        targets
+      });
       return;
     }
     executeSkillAction(activeAlly.id, skill, activeAlly.id);
@@ -258,7 +262,7 @@ export function BattleView({
   const defendActiveAlly = () => {
     if (!canPlayerAct || !activeAlly) return;
     setBusy(true);
-    setPendingSkill(null);
+    setPendingSupportSkill(null);
     queueEffect({ id: Date.now(), sourceSide: "ally", actorId: activeAlly.id, targetIds: [activeAlly.id], element: getPetSpecies(activeAlly.speciesId).element, category: "defense" });
     onDefend(activeAlly.id);
     window.setTimeout(() => setBusy(false), 220);
@@ -266,17 +270,21 @@ export function BattleView({
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (!isDesktopShortcutEnvironment() || isEditableTarget(event.target) || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
-      if (!["1", "2", "3", "4"].includes(event.key)) return;
+      if (isEditableTarget(event.target) || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      if (event.key === "Escape" && pendingSupportSkill) {
+        event.preventDefault();
+        setPendingSupportSkill(null);
+        return;
+      }
+      if (!isDesktopShortcutEnvironment() || !["1", "2", "3", "4"].includes(event.key)) return;
 
-      if (pendingSkill) {
+      if (pendingSupportSkill) {
         if (!["1", "2", "3"].includes(event.key)) return;
-        const target = pendingSkill.targets.filter((unit) => unit.currentHp > 0)[Number(event.key) - 1];
+        const target = pendingSupportSkill.targets.filter((unit) => unit.currentHp > 0)[Number(event.key) - 1];
         if (!target) return;
         event.preventDefault();
-        if (pendingSkill.targetSide === "enemy") setSelectedEnemyId(target.id);
-        if (pendingSkill.targetSide === "ally") setSelectedFriendId(target.id);
-        executeSkillAction(pendingSkill.actorId, pendingSkill.skill, target.id);
+        setSelectedFriendId(target.id);
+        executeSkillAction(pendingSupportSkill.actorId, pendingSupportSkill.skill, target.id);
         return;
       }
 
@@ -294,7 +302,21 @@ export function BattleView({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [activeAlly, battle.allies, battle.enemies, canPlayerAct, pendingSkill, skills]);
+  }, [activeAlly, battle.allies, battle.enemies, canPlayerAct, pendingSupportSkill, selectedEnemy?.id, skills]);
+
+  const selectEnemy = (unit: BattleUnit) => {
+    setPendingSupportSkill(null);
+    setSelectedEnemyId(unit.id);
+  };
+
+  const selectFriend = (unit: BattleUnit) => {
+    if (pendingSupportSkill) {
+      setSelectedFriendId(unit.id);
+      executeSkillAction(pendingSupportSkill.actorId, pendingSupportSkill.skill, unit.id);
+      return;
+    }
+    setSelectedFriendId(unit.id);
+  };
 
   return (
     <div className="battle-backdrop">
@@ -318,8 +340,20 @@ export function BattleView({
           </button>
         </div>
 
-        <div className="battle-field dedicated-battlefield">
+        <div
+          className={`battle-field dedicated-battlefield ${pendingSupportSkill ? "support-targeting" : ""}`}
+          onPointerDown={(event) => {
+            if (pendingSupportSkill && event.target === event.currentTarget) setPendingSupportSkill(null);
+          }}
+        >
           {showEncounterNotice ? <div className="encounter-notice">{encounterNoticeText}</div> : null}
+          {pendingSupportSkill ? (
+            <div className="support-target-prompt">
+              <strong>{skillName(language, pendingSupportSkill.skill.id, pendingSupportSkill.skill.name)}</strong>
+              <span>{t(language, "chooseSupportTargetPrompt")}</span>
+              <small>{t(language, "escCancel")}</small>
+            </div>
+          ) : null}
           {effect ? <SkillEffect id={effect.id} element={effect.element} category={effect.category} sourceSide={effect.sourceSide} /> : null}
           <div className="battle-side ally-side">
             <h3>{t(language, "allyLine")}</h3>
@@ -335,10 +369,7 @@ export function BattleView({
                   targeted={effect?.targetIds.includes(unit.id)}
                   side="ally"
                   language={language}
-                  onClick={() => {
-                    setPendingSkill(null);
-                    setSelectedFriendId(unit.id);
-                  }}
+                  onClick={() => selectFriend(unit)}
                 />
               ))}
             </div>
@@ -358,7 +389,7 @@ export function BattleView({
                   targeted={effect?.targetIds.includes(unit.id)}
                   side="enemy"
                   language={language}
-                  onClick={() => setSelectedEnemyId(unit.id)}
+                  onClick={() => selectEnemy(unit)}
                 />
               ))}
             </div>
@@ -366,6 +397,27 @@ export function BattleView({
         </div>
 
         <div className="battle-command">
+          <div className="battle-target-strip">
+            <button className="target-chip enemy-target" type="button" disabled={!selectedEnemy} onClick={() => selectedEnemy && selectEnemy(selectedEnemy)}>
+              <PixelIcon name="swords" size={15} />
+              <span>{t(language, "attackTarget")}</span>
+              <strong>{selectedEnemy ? unitName(selectedEnemy, language) : t(language, "noTarget")}</strong>
+            </button>
+            <button
+              className="target-chip ally-target"
+              type="button"
+              disabled={!selectedFriend}
+              onClick={() => {
+                setPendingSupportSkill(null);
+                if (selectedFriend) setSelectedFriendId(selectedFriend.id);
+              }}
+            >
+              <PixelIcon name="heart" size={15} />
+              <span>{t(language, "supportTarget")}</span>
+              <strong>{selectedFriend ? unitName(selectedFriend, language) : t(language, "noTarget")}</strong>
+            </button>
+          </div>
+
           <div className="skill-row">
             {skills.map((skill, index) => {
               const shortcut = String(index + 1);
@@ -379,6 +431,7 @@ export function BattleView({
                   onClick={(event) => {
                     if (disabled) {
                       event.preventDefault();
+                      setPendingSupportSkill(null);
                       return;
                     }
                     prepareSkillAction(skill);
@@ -419,63 +472,21 @@ export function BattleView({
             </div>
           ) : null}
 
-          {pendingSkill ? (
-            <div className="target-subpanel">
-              <div className="target-subpanel-title">
-                <strong>{skillName(language, pendingSkill.skill.id, pendingSkill.skill.name)}</strong>
-                <span>{pendingSkill.targetSide === "enemy" ? t(language, "chooseEnemyTarget") : t(language, "chooseAllyTarget")}</span>
-                <button className="subpanel-close" onClick={() => setPendingSkill(null)} type="button">
-                  <PixelIcon name="x" size={15} />
-                </button>
-              </div>
-              <div className="target-subbuttons">
-                {pendingSkill.targets
-                  .filter((target) => target.currentHp > 0)
-                  .map((target, index) => {
-                    const species = getPetSpecies(target.speciesId);
-                    const maxHp = getBattleUnitStats(target).hp;
-                    return (
-                      <button
-                        className="target-subbutton"
-                        key={target.id}
-                        onClick={() => {
-                          if (pendingSkill.targetSide === "enemy") setSelectedEnemyId(target.id);
-                          if (pendingSkill.targetSide === "ally") setSelectedFriendId(target.id);
-                          executeSkillAction(pendingSkill.actorId, pendingSkill.skill, target.id);
-                        }}
-                        type="button"
-                      >
-                        <ShortcutHint value={String(index + 1)} />
-                        <span className="element-chip" style={{ background: ELEMENT_COLORS[species.element] }}>
-                          {elementLabel(language, species.element)}
-                        </span>
-                        <strong>{petName(language, species.id, species.name)}</strong>
-                        <small>
-                          HP {target.currentHp}/{maxHp}
-                        </small>
-                      </button>
-                    );
-                  })}
-              </div>
-            </div>
-          ) : null}
-
           <div className="capture-row">
-            {battle.enemies.map((enemy) => (
-              <button
-                className="icon-button capture-button"
-                key={enemy.id}
-                disabled={resolved || busy || !activeAlly || enemy.isBoss || captureStones <= 0}
-                onClick={() => {
-                  queueEffect({ id: Date.now(), sourceSide: "ally", actorId: activeAlly?.id, targetIds: [enemy.id], element: "capture", category: "capture" });
-                  onCapture(enemy.id);
-                }}
-              >
-                <PixelIcon name="circle" size={17} />
-                {t(language, "capture")}{unitName(enemy, language)}
-                <small>{Math.round(captureChance(enemy) * 100)}%</small>
-              </button>
-            ))}
+            <button
+              className="icon-button capture-button"
+              disabled={resolved || busy || !activeAlly || !selectedEnemy || selectedEnemy.isBoss || captureStones <= 0}
+              onClick={() => {
+                if (!selectedEnemy) return;
+                setPendingSupportSkill(null);
+                queueEffect({ id: Date.now(), sourceSide: "ally", actorId: activeAlly?.id, targetIds: [selectedEnemy.id], element: "capture", category: "capture" });
+                onCapture(selectedEnemy.id);
+              }}
+            >
+              <PixelIcon name="circle" size={17} />
+              {t(language, "captureSelected", { target: selectedEnemy ? unitName(selectedEnemy, language) : t(language, "noTarget") })}
+              {selectedEnemy ? <small>{Math.round(captureChance(selectedEnemy) * 100)}%</small> : null}
+            </button>
             <button className="icon-button escape-button" onClick={onRun} disabled={resolved || busy || battle.isBoss}>
               <PixelIcon name="x" size={17} />
               {t(language, "run")}

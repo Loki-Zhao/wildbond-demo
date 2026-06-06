@@ -21,8 +21,8 @@ interface MapViewProps {
   onTileMove?: (x: number, y: number) => void;
 }
 
-const viewWidth = 15;
-const viewHeight = 11;
+const viewWidth = 21;
+const viewHeight = 13;
 const tileSize = 64;
 const tileGap = 2;
 const tilePadding = 12;
@@ -86,7 +86,7 @@ export function MapView({
   const tiles = [];
 
   const handleTilePointerDown = (event: PointerEvent<HTMLDivElement>) => {
-    if (event.pointerType !== "touch") return;
+    if (event.button !== 0) return;
     touchStartRef.current = {
       pointerId: event.pointerId,
       x: event.clientX,
@@ -95,7 +95,7 @@ export function MapView({
   };
 
   const handleTilePointerUp = (event: PointerEvent<HTMLDivElement>, worldX: number, worldY: number, outside: boolean) => {
-    if (!onTileMove || outside || event.pointerType !== "touch") return;
+    if (!onTileMove || outside || event.button !== 0) return;
     const start = touchStartRef.current;
     touchStartRef.current = null;
     if (!start || start.pointerId !== event.pointerId) return;
@@ -202,6 +202,7 @@ export function MapView({
           {
             "--map-logical-width": `${logicalMapWidth}px`,
             "--map-logical-height": `${logicalMapHeight}px`,
+            "--map-view-width": viewWidth,
             "--map-scale": tileScale
           } as CSSProperties
         }
