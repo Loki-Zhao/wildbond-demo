@@ -63,7 +63,7 @@ type PanelId = "party" | "storage" | "fusion" | "dex" | "maps";
 type OperationToast = {
   id: string;
   message: string;
-  tone: "success" | "failure";
+  tone: "success" | "failure" | "info";
 };
 
 const isDesktopShortcutEnvironment = (): boolean =>
@@ -83,6 +83,12 @@ const unlockText = (language: Language, mapId: string): string => {
 };
 
 const allPets = (game: GameState): PetInstance[] => [...game.party, ...game.storage];
+
+const compactToastMessage = (messages: string[], fallback: string): string => {
+  const cleanMessages = messages.map((message) => message.trim()).filter(Boolean);
+  if (!cleanMessages.length) return fallback;
+  return cleanMessages.slice(0, 3).join(" / ");
+};
 
 function PetCard({
   pet,
@@ -327,16 +333,18 @@ export function App() {
     move(0, Math.sign(deltaY));
   };
 
-  const handleBattleResult = (resultBattle: BattleState, victory?: boolean, defeat?: boolean) => {
+  const handleBattleResult = (resultBattle: BattleState, victory?: boolean, defeat?: boolean, actionMessage?: string) => {
     if (victory) {
       setGame((current) => finishBattle(current, resultBattle, { bossDefeated: resultBattle.isBoss }));
       setBattle(null);
       setBattleOutcome(null);
+      showOperationToast(actionMessage || "战斗胜利。", "success");
       return;
     }
     if (defeat) {
       setBattle(resultBattle);
       setBattleOutcome("defeat");
+      showOperationToast(actionMessage || "战斗失败。", "failure");
       return;
     }
     setBattle(resultBattle);
@@ -346,26 +354,33 @@ export function App() {
     if (!battle) return;
     const result = useSkill(battle, casterId, skillId, targetId);
     const advanced = result.victory || result.defeat ? result : advanceBattleTurn(result.state);
-    handleBattleResult(advanced.state, advanced.victory, advanced.defeat);
+    const actionMessage = compactToastMessage([...result.messages, ...advanced.messages], "行动完成。");
+    showOperationToast(actionMessage, result.defeat ? "failure" : "info");
+    handleBattleResult(advanced.state, advanced.victory, advanced.defeat, actionMessage);
   };
 
   const handleEnemyAct = () => {
     if (!battle) return;
     const result = enemyAct(battle);
-    handleBattleResult(result.state, result.victory, result.defeat);
+    const actionMessage = compactToastMessage(result.messages, "敌方行动完成。");
+    showOperationToast(actionMessage, result.defeat ? "failure" : "info");
+    handleBattleResult(result.state, result.victory, result.defeat, actionMessage);
   };
 
   const handleDefend = (allyId: string) => {
     if (!battle) return;
     const result = defendUnit(battle, allyId);
     const advanced = result.victory || result.defeat ? result : advanceBattleTurn(result.state);
-    handleBattleResult(advanced.state, advanced.victory, advanced.defeat);
+    const actionMessage = compactToastMessage([...result.messages, ...advanced.messages], "进入防御姿态。");
+    showOperationToast(actionMessage, "info");
+    handleBattleResult(advanced.state, advanced.victory, advanced.defeat, actionMessage);
   };
 
   const handleCapture = (enemyId: string) => {
     if (!battle) return;
     if (game.inventory.captureStones <= 0) {
       setBattle({ ...battle, log: ["捕获石不足。", ...battle.log].slice(0, 80) });
+      showOperationToast("捕获石不足。", "failure");
       return;
     }
 
@@ -379,8 +394,9 @@ export function App() {
       nextGame = addPetToCollection(nextGame, result.pet);
     }
     setGame(nextGame);
+    showOperationToast(result.message, result.success ? "success" : "failure");
     if (result.battle.enemies.length === 0) {
-      handleBattleResult(result.battle, true, false);
+      handleBattleResult(result.battle, true, false, result.message);
       return;
     }
     setBattle(result.battle);
@@ -460,80 +476,110 @@ export function App() {
   };
 
   const moveToStorage = (uid: string) => {
-    setGame((current) => {
-      if (current.party.length <= 1) return addLog(current, "至少保留一只出战宠物。");
-      const pet = current.party.find((item) => item.uid === uid);
-      if (!pet) return current;
-      return addLog(
+    if (game.party.length <= 1) {
+      setGame(addLog(game, "至少保留一只出战宠物。"));
+      showOperationToast("至少保留一只出战宠物。", "failure");
+      return;
+    }
+    const pet = game.party.find((item) => item.uid === uid);
+    if (!pet) return;
+    const message = `${getPetSpecies(pet.speciesId).name}进入仓库。`;
+    setGame(
+      addLog(
         {
-          ...current,
-          party: current.party.filter((item) => item.uid !== uid),
-          storage: [...current.storage, pet]
+          ...game,
+          party: game.party.filter((item) => item.uid !== uid),
+          storage: [...game.storage, pet]
         },
-        `${getPetSpecies(pet.speciesId).name}进入仓库。`
-      );
-    });
+        message
+      )
+    );
+    showOperationToast(message, "info");
   };
 
   const moveToParty = (uid: string) => {
-    setGame((current) => {
-      if (current.party.length >= 3) return addLog(current, "出战队伍已满。");
-      const pet = current.storage.find((item) => item.uid === uid);
-      if (!pet) return current;
-      return addLog(
+    if (game.party.length >= 3) {
+      setGame(addLog(game, "出战队伍已满。"));
+      showOperationToast("出战队伍已满。", "failure");
+      return;
+    }
+    const pet = game.storage.find((item) => item.uid === uid);
+    if (!pet) return;
+    const message = `${getPetSpecies(pet.speciesId).name}加入队伍。`;
+    setGame(
+      addLog(
         {
-          ...current,
-          party: [...current.party, pet],
-          storage: current.storage.filter((item) => item.uid !== uid)
+          ...game,
+          party: [...game.party, pet],
+          storage: game.storage.filter((item) => item.uid !== uid)
         },
-        `${getPetSpecies(pet.speciesId).name}加入队伍。`
-      );
-    });
+        message
+      )
+    );
+    showOperationToast(message, "success");
   };
 
   const useFruit = (uid: string) => {
-    setGame((current) => {
-      if (current.inventory.healingFruits <= 0) return addLog(current, "治疗果不足。");
-      const party = current.party.map((pet) => {
-        if (pet.uid !== uid) return pet;
-        return {
-          ...pet,
-          currentHp: Math.min(getMaxHp(pet), pet.currentHp + Math.round(getMaxHp(pet) * 0.45))
-        };
-      });
-      return addLog(
+    if (game.inventory.healingFruits <= 0) {
+      setGame(addLog(game, "治疗果不足。"));
+      showOperationToast("治疗果不足。", "failure");
+      return;
+    }
+    const target = game.party.find((pet) => pet.uid === uid);
+    const targetName = target ? getPetSpecies(target.speciesId).name : "";
+    const party = game.party.map((pet) => {
+      if (pet.uid !== uid) return pet;
+      return {
+        ...pet,
+        currentHp: Math.min(getMaxHp(pet), pet.currentHp + Math.round(getMaxHp(pet) * 0.45))
+      };
+    });
+    const message = targetName ? `${targetName}使用治疗果恢复 HP。` : "使用了治疗果。";
+    setGame(
+      addLog(
         {
-          ...current,
+          ...game,
           party,
           inventory: {
-            ...current.inventory,
-            healingFruits: current.inventory.healingFruits - 1
+            ...game.inventory,
+            healingFruits: game.inventory.healingFruits - 1
           }
         },
-        "使用了治疗果。"
-      );
-    });
+        message
+      )
+    );
+    showOperationToast(message, "success");
   };
 
   const decomposePet = (uid: string) => {
-    setGame((current) => {
-      const pet = current.storage.find((item) => item.uid === uid);
-    if (!pet) return addLog(current, "出战中的宠物不可分解。");
-      const species = getPetSpecies(pet.speciesId);
-      if (species.growthLevel === 4) return addLog(current, "神兽暂时不可分解。");
-      const crystals = decomposeCrystalValue(pet);
-      return addLog(
+    const pet = game.storage.find((item) => item.uid === uid);
+    if (!pet) {
+      setGame(addLog(game, "出战中的宠物不可分解。"));
+      showOperationToast("出战中的宠物不可分解。", "failure");
+      return;
+    }
+    const species = getPetSpecies(pet.speciesId);
+    if (species.growthLevel === 4) {
+      setGame(addLog(game, "神兽暂时不可分解。"));
+      showOperationToast("神兽暂时不可分解。", "failure");
+      return;
+    }
+    const crystals = decomposeCrystalValue(pet);
+    const message = `${species.name}分解为分解水晶 x${crystals}。`;
+    setGame(
+      addLog(
         {
-          ...current,
-          storage: current.storage.filter((item) => item.uid !== uid),
+          ...game,
+          storage: game.storage.filter((item) => item.uid !== uid),
           inventory: {
-            ...current.inventory,
-            crystals: current.inventory.crystals + crystals
+            ...game.inventory,
+            crystals: game.inventory.crystals + crystals
           }
         },
-        `${species.name}分解为分解水晶 x${crystals}。`
-      );
-    });
+        message
+      )
+    );
+    showOperationToast(message, "success");
   };
 
   const enhancePet = (uid: string) => {

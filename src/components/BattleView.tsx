@@ -4,7 +4,7 @@ import { getSkill } from "../data/skills";
 import { ELEMENT_COLORS, getBattleUnitStats } from "../game/balance";
 import { captureChance, getActiveUnit } from "../game/combat";
 import type { BattleState, BattleUnit, ElementType, Skill, SkillCategory } from "../game/types";
-import { elementLabel, petName, rarityLabel, skillName, skillTooltip, statusLabel, t, translateLog, type Language } from "../i18n";
+import { elementLabel, petName, rarityLabel, skillName, skillTooltip, statusLabel, t, type Language } from "../i18n";
 import { PixelIcon } from "./PixelIcon";
 import { PixelPetSprite } from "./PixelSprite";
 import { ShortcutHint } from "./ShortcutHint";
@@ -318,30 +318,26 @@ export function BattleView({
     setSelectedFriendId(unit.id);
   };
 
+  // New layout: Full-screen battle with top battlefield area and bottom fixed command panel
   return (
     <div className="battle-backdrop">
       <section className="battle-panel">
+        {/* Header */}
         <div className="battle-header">
-          <div>
-            <h2>
-              {battle.isBoss
-                ? `${t(language, "bossBattle")}${battle.bossChallengeLevel ? ` +${battle.bossChallengeLevel}` : ""}`
-                : t(language, "wildBattle")}
-            </h2>
-            <span>{t(language, "round", { round: battle.round })}</span>
-          </div>
-          <div className="turn-indicator">
-            <strong>{t(language, "currentTurn")}</strong>
-            <span>{activeUnit ? unitName(activeUnit, language) : "-"}</span>
-            <small>{activeUnit?.side === "enemy" ? t(language, "enemyActing") : t(language, "chooseAction")}</small>
-          </div>
+          <h2>
+            {battle.isBoss
+              ? `${t(language, "bossBattle")}${battle.bossChallengeLevel ? ` +${battle.bossChallengeLevel}` : ""}`
+              : t(language, "wildBattle")}
+          </h2>
+          <span className="battle-round">Round {battle.round}</span>
           <button className="square-button" onClick={onRun} disabled={battle.isBoss} title={t(language, "runTitle")}>
             <PixelIcon name="x" size={18} />
           </button>
         </div>
 
+        {/* Battle Field */}
         <div
-          className={`battle-field dedicated-battlefield ${pendingSupportSkill ? "support-targeting" : ""}`}
+          className={`battle-field ${pendingSupportSkill ? "support-targeting" : ""}`}
           onPointerDown={(event) => {
             if (pendingSupportSkill && event.target === event.currentTarget) setPendingSupportSkill(null);
           }}
@@ -396,10 +392,20 @@ export function BattleView({
           </div>
         </div>
 
+        {/* Command Panel - Fixed Bottom */}
         <div className="battle-command">
-          <div className="battle-target-strip">
+          {/* Turn indicator */}
+          <div className="turn-info">
+            <strong>{activeUnit ? unitName(activeUnit, language) : "-"}</strong>
+            <span>
+              {activeUnit?.side === "enemy" ? t(language, "enemyActing") : t(language, "chooseAction")}
+            </span>
+          </div>
+
+          {/* Target strip */}
+          <div className="target-strip">
             <button className="target-chip enemy-target" type="button" disabled={!selectedEnemy} onClick={() => selectedEnemy && selectEnemy(selectedEnemy)}>
-              <PixelIcon name="swords" size={15} />
+              <PixelIcon name="swords" size={14} />
               <span>{t(language, "attackTarget")}</span>
               <strong>{selectedEnemy ? unitName(selectedEnemy, language) : t(language, "noTarget")}</strong>
             </button>
@@ -412,20 +418,21 @@ export function BattleView({
                 if (selectedFriend) setSelectedFriendId(selectedFriend.id);
               }}
             >
-              <PixelIcon name="heart" size={15} />
+              <PixelIcon name="heart" size={14} />
               <span>{t(language, "supportTarget")}</span>
               <strong>{selectedFriend ? unitName(selectedFriend, language) : t(language, "noTarget")}</strong>
             </button>
           </div>
 
-          <div className="skill-row">
+          {/* Skills in 2×2 grid */}
+          <div className="skill-grid">
             {skills.map((skill, index) => {
               const shortcut = String(index + 1);
-              const disabled = !canPlayerAct || activeAlly!.ap < skill.apCost;
+              const disabled = !canPlayerAct || (activeAlly ? activeAlly.ap < skill.apCost : true);
               const tooltip = skillTooltip(language, skill);
               return (
                 <button
-                  className={`skill-button ${disabled ? "is-disabled" : ""}`}
+                  className={`skill-btn ${disabled ? "is-disabled" : ""}`}
                   key={skill.id}
                   aria-disabled={disabled}
                   onClick={(event) => {
@@ -439,28 +446,33 @@ export function BattleView({
                   {...bindSkillInfo(tooltip)}
                 >
                   <ShortcutHint value={shortcut} />
-                  {skill.category === "attack" ? (
-                    <PixelIcon name="swords" size={17} />
-                  ) : skill.category === "heal" ? (
-                    <PixelIcon name="heart" size={17} />
-                  ) : skill.category === "defense" ? (
-                    <PixelIcon name="shield" size={17} />
-                  ) : (
-                    <PixelIcon name="sparkles" size={17} />
-                  )}
-                  <span>{skillName(language, skill.id, skill.name)}</span>
+                  <span className="skill-btn-label">
+                    {skill.category === "attack" ? (
+                      <PixelIcon name="swords" size={15} />
+                    ) : skill.category === "heal" ? (
+                      <PixelIcon name="heart" size={15} />
+                    ) : skill.category === "defense" ? (
+                      <PixelIcon name="shield" size={15} />
+                    ) : (
+                      <PixelIcon name="sparkles" size={15} />
+                    )}
+                    <span>{skillName(language, skill.id, skill.name)}</span>
+                  </span>
                   <small>{skill.apCost} AP</small>
                 </button>
               );
             })}
-            <button className="skill-button defense-action" disabled={!canPlayerAct} onClick={defendActiveAlly} title={t(language, "defenseTitle")}>
+            <button className="skill-btn defense-btn" disabled={!canPlayerAct} onClick={defendActiveAlly} title={t(language, "defenseTitle")}>
               <ShortcutHint value="4" />
-              <PixelIcon name="shield" size={17} />
-              <span>{t(language, "defense")}</span>
+              <span className="skill-btn-label">
+                <PixelIcon name="shield" size={15} />
+                <span>{t(language, "defense")}</span>
+              </span>
               <small>{t(language, "damageOneThird")}</small>
             </button>
           </div>
 
+          {/* Defeat panel */}
           {resolved ? (
             <div className="battle-result-panel danger">
               <strong>{t(language, "defeatTitle")}</strong>
@@ -472,9 +484,10 @@ export function BattleView({
             </div>
           ) : null}
 
-          <div className="capture-row">
+          {/* Capture + Run */}
+          <div className="action-row">
             <button
-              className="icon-button capture-button"
+              className="icon-button capture-btn"
               disabled={resolved || busy || !activeAlly || !selectedEnemy || selectedEnemy.isBoss || captureStones <= 0}
               onClick={() => {
                 if (!selectedEnemy) return;
@@ -483,22 +496,18 @@ export function BattleView({
                 onCapture(selectedEnemy.id);
               }}
             >
-              <PixelIcon name="circle" size={17} />
-              {t(language, "captureSelected", { target: selectedEnemy ? unitName(selectedEnemy, language) : t(language, "noTarget") })}
+              <PixelIcon name="circle" size={16} />
+              <span>{t(language, "captureSelected", { target: selectedEnemy ? unitName(selectedEnemy, language) : t(language, "noTarget") })}</span>
               {selectedEnemy ? <small>{Math.round(captureChance(selectedEnemy) * 100)}%</small> : null}
             </button>
-            <button className="icon-button escape-button" onClick={onRun} disabled={resolved || busy || battle.isBoss}>
-              <PixelIcon name="x" size={17} />
-              {t(language, "run")}
+            <button className="icon-button escape-btn" onClick={onRun} disabled={resolved || busy || battle.isBoss}>
+              <PixelIcon name="x" size={16} />
+              <span>{t(language, "run")}</span>
             </button>
           </div>
+
         </div>
 
-        <div className="battle-log">
-          {battle.log.slice(0, 8).map((line, index) => (
-            <p key={`${line}-${index}`}>{translateLog(language, line)}</p>
-          ))}
-        </div>
         {skillInfoPopup}
       </section>
     </div>

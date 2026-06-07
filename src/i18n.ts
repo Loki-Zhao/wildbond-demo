@@ -25,7 +25,7 @@ export const writeStoredLanguage = (language: Language): void => {
 
 const uiJa: Record<string, string> = {
   appTitle: "原野契約",
-  demoVersion: "Demo v0.1",
+  demoVersion: "Demo v0.2",
   language: "言語",
   chinese: "中文",
   japanese: "日本語",
@@ -122,7 +122,7 @@ export const t = (language: Language, key: string, params: Record<string, string
   if (language === "zh") {
     const zh: Record<string, string> = {
       appTitle: "原野契约",
-      demoVersion: "Demo v0.1",
+      demoVersion: "Demo v0.2",
       language: "语言",
       chinese: "中文",
       japanese: "日本語",
